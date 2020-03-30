@@ -1,0 +1,969 @@
+!****************************************************************** 
+! Test program in Fortran 90
+! To emulate Herve Carfantan's simulation 
+!  spdiv => Direct spectral division
+!  wiene => Wiener filter 
+!  tikho => Tikhonov regularisation
+!  maxen => Maximum Entropy method
+!
+! JLP
+! Version 23/03/2001
+!****************************************************************** 
+program dcv_deconv_1D
+ use dcv_module
+ implicit none
+ integer,parameter		:: n_simu=1,idim=512
+ logical,parameter		:: display_all=.false.
+ real,dimension(:),allocatable	:: hh,yy,yy0,yyd,w0,w1
+ real				:: alpha,rms_err
+ integer			:: i,nn,nn1,iter,hh_nx
+ integer(kind=4)		:: pntr,nx,ny
+ character(len=20)		:: extension
+ character(len=40)		:: title 
+ character(len=60)		:: filename
+ character(len=80)		:: comments
+ character(len=5)		:: option
+ common/dcv_option/option
+
+call jlp_begin
+call jlp_inquifmt
+
+print *,' Program to deconvolve 1D signals'
+print *,' JLP version 23/03/2001'
+
+if(n_simu==1)then
+  extension='simu1D'
+  nn1 = 256
+! Length of the support of hh is hh_nx=5 (for this simulation)
+  hh_nx = 5
+else
+  extension='simu2D'
+  nn1 = 512 
+! Length of the support of hh is hh_nx=32 (for this simulation)
+  hh_nx = 32 
+endif
+
+! Read it first to determine the size:
+filename=trim(extension)//'_yy0'
+call jlp_vm_readimag(pntr,nx,ny,filename,comments);
+if(ny /= 1 .or. nx > idim)then 
+   print *,' Fatal error: nx=',nx,' ny=',ny; stop;
+endif
+nn = nx;
+! To prepare FFT's:
+call fft_setup(nn1,1)
+
+! Then allocate memory space:
+allocate(yy0(idim)); allocate(yy(idim)); allocate(hh(idim));
+allocate(yyd(idim)); allocate(w0(idim)); allocate(w1(idim)); 
+
+! Read input files:
+!----------------------
+! Original signal:
+filename=trim(extension)//'_yy0'
+call jlp_readimag(yy0,nx,ny,idim,filename,comments);
+yy0(nn+1:idim)=0.;
+!----------------------
+! Signal to deconvolve:
+filename=trim(extension)//'_yyb'
+call jlp_readimag(yy,nx,ny,idim,filename,comments);
+if(ny /= 1 .or. nx /= nn)then 
+   print *,' Fatal error: nx=',nx,' ny=',ny; stop;
+endif
+yy(nn+1:idim)=0.;
+!----------------------
+! PSF:
+filename=trim(extension)//'_psf'
+call jlp_readimag(hh,nx,ny,idim,filename,comments);
+if(ny /= 1 .or. nx /= nn)then 
+   print *,' Fatal error: nx=',nx,' ny=',ny; stop;
+endif
+hh(nn+1:idim)=0.;
+
+! Set to zero all arrays:
+w0 = 0.; w1 = 0.; 
+
+!--------------------------------
+! Check if input is OK:
+if(display_all)then
+  call dcv_display_input(yy0,yy,hh,w0,w1,nn,nn1)
+endif
+
+!--------------------------------
+! Deconvolution
+!--------------------------------
+
+write(6,18); 
+18 format(/,&
+' ==================== Options: ================',/,&
+' - spdiv: spectral division',/,&
+' - wiene: Wiener filter',/,&
+' - tikho: Tikhonov''s regularisation',/,&
+' - maxen: regularisation with maximum entropy',/,&
+' - gmark: Gauss-Markov''s regularisation (p=2)',/,&
+' ======== Enter the option you want: ===========')
+read(5,*) option
+print *,' OK: option=',option
+!option='gmark'
+!option='maxen'
+!option='spdiv'
+!option='wiene'
+!option='tikho'
+!option='banan'
+
+select case(option)
+
+!--------------------------------
+! Deconvolution by spectral division:
+case('spdiv')
+   call dcv_spdiv(yy,hh,yyd,w0,w1,nn,nn1)
+   yyd(nn+1:idim) = 0.; yy0(nn+1:idim) = 0.;
+   rms_err=sqrt(sum((yyd-yy0)**2))/float(nn)
+   print *,'rms error=',rms_err
+   write(6,*) "Display signal deconvolved by spectral division:"
+   write(title,10) rms_err
+10 format('Spectral division:  rms=',f6.4)
+   call dcv_plot2(yyd,yy0,nn,title)
+
+!--------------------------------
+! Deconvolution by Wiener filter:
+case('wiene')
+   alpha=1.
+   call dcv_wiener(yy,hh,yyd,w0,w1,nn,nn1,alpha)
+   yyd(nn+1:idim) = 0.; yy0(nn+1:idim) = 0.;
+   rms_err=sqrt(sum((yyd-yy0)**2))/float(nn)
+   print *,'rms error=',rms_err
+   write(6,*) "Display Wiener deconvolved signal:"
+   write(title,11) alpha,rms_err
+11 format('Wiener: alpha=',F4.1,' rms=',f6.4)
+   if(n_simu==1)then
+     call dcv_plot2(yyd,yy0,nn,title)
+   else
+! Bad visibility for the simulation #2, 
+! so only the deconvolved signal is displayed
+     call dcv_plot1(yyd,nn,title)
+   endif
+
+!--------------------------------
+! Deconvolution with Tikhonov's regularisation 
+case('tikho')
+   print *,' Enter alpha value: '; read(5,*)alpha
+   call dcv_tikhonov(yy,hh,yyd,nn,nn1,alpha,hh_nx,iter)
+   yyd(nn+1:idim) = 0.; yy0(nn+1:idim) = 0.;
+   rms_err=sqrt(sum((yyd-yy0)**2))/float(nn)
+   print *,'rms error=',rms_err
+   write(6,*) "Display Tikhonov deconvolved signal:"
+   write(title,12) alpha,rms_err,iter
+12 format('Tikhonov: alpha=',F4.1,' rms=',f6.4,' iter=',I3)
+   call dcv_plot2(yyd,yy0,nn,title)
+
+!--------------------------------
+! Deconvolution with Maximum Entropy method 
+case('maxen')
+   print *,' Enter alpha value: '; read(5,*)alpha
+   call dcv_mem(yy,hh,yyd,nn,nn1,alpha,hh_nx,iter)
+   yyd(nn+1:idim) = 0.; yy0(nn+1:idim) = 0.;
+   rms_err=sqrt(sum((yyd-yy0)**2))/float(nn)
+   print *,'rms error=',rms_err
+   write(6,*) "Display MEM deconvolved signal:"
+   write(title,13) alpha,rms_err,iter
+13 format('MEM: alpha=',F4.1,' rms=',f6.4,' iter=',I3)
+   call dcv_plot2(yyd,yy0,nn,title)
+
+!--------------------------------
+! Deconvolution with Gauss Markov regularisation 
+case('gmark')
+   print *,' Enter alpha: '; read(5,*)alpha
+   call dcv_gmark(yy,hh,yyd,nn,nn1,alpha,hh_nx,iter)
+   yyd(nn+1:idim) = 0.; yy0(nn+1:idim) = 0.;
+   rms_err=sqrt(sum((yyd-yy0)**2))/float(nn)
+   print *,'rms error=',rms_err
+   write(6,*) "Display Gauss-Markov deconvolved signal:"
+   write(title,14) alpha,rms_err,iter
+14 format('Gauss-Markov alpha=',F4.1,' rms=',f5.3,' it=',I3)
+   call dcv_plot2(yyd,yy0,nn,title)
+
+!---------------------------------
+! Test with Banana function:
+case('banan')
+   call dcv_banana
+case default
+   print *,' Fatal: invalid option'
+   stop
+end select
+
+call jlp_end
+
+end program dcv_deconv_1D 
+!*************************************************************
+! To display a curve (linear) 
+!*************************************************************
+subroutine dcv_plot1(yy,nn,title)
+ implicit none
+ integer                        :: i,nn
+ real,dimension(nn)            :: xx,yy
+ character(len=40)              :: xlabel,ylabel,title
+ character(len=32)              :: plotdev
+
+ xlabel=" "; ylabel=" "; plotdev="&xterm";
+! X axis:
+ xx = (/ (float(i),i=1,nn) /)
+ call display1(xx,yy,1,nn,xlabel,ylabel,title,plotdev)
+
+return
+end subroutine dcv_plot1
+!*************************************************************
+! To display a curve (semi-log)
+!*************************************************************
+subroutine dcv_plot1_log(yy,nn1,title)
+ implicit none
+ integer        		:: i,nn1
+ real,dimension(nn1) 		:: x0,y0,yy
+ character(len=40)		:: xlabel,ylabel,title 
+ character(len=32)		:: plotdev
+
+ xlabel=" "; ylabel=" "; plotdev="&xterm";
+! X axis:
+ x0 = (/ (float(i)/float(nn1),i=-(nn1/2-1),nn1/2) /)
+! Y axis:
+ y0 = log10(yy)
+ call display1(x0,y0,1,nn1,xlabel,ylabel,title,plotdev)
+
+return
+end subroutine dcv_plot1_log
+!*************************************************************
+! To display a curve (linear)
+!*************************************************************
+subroutine dcv_plot2(y1,y2,nn,title)
+ implicit none
+ integer                :: i,nn
+ real,dimension(nn)     :: xx,y1,y2
+ character		:: in_file(40),in_comments(80)
+ character(len=4)	:: nchar1,nchar2
+ character(len=40)      :: xlabel,ylabel,title
+ character(len=32)      :: plotdev
+
+ xlabel=" "; ylabel=" "; plotdev='&xterm';
+ nchar1="L0"; nchar2="L2"; in_file=" "; in_comments=" ";
+! X axis:
+ xx = (/ (float(i),i=1,nn) /)
+ call display2(xx,y1,1,nn,xx,y2,1,nn,xlabel,ylabel,title,plotdev,&
+               nchar1,nchar2,in_file,in_comments)
+
+return
+end subroutine dcv_plot2
+!*************************************************************
+! Deconvolution with Gauss-Markov regularisation 
+! Criterium to minimize is:
+! || y - H x ||^2 + alpha Sigma_{k=1}^{k=N} x_k^2
+!*************************************************************
+subroutine dcv_gmark(y_y,hh,yyd,n_n,nn_1,alph_a,hh_n_x,iter)
+ implicit none
+!
+! "func" is used by "dcv_check_gradient":
+! real,external		:: func
+!
+ integer,parameter	:: idim=512
+ integer        	:: nn,n_n,nn1,nn_1,iter,hh_nx,hh_n_x
+ real			:: alph_a,alpha,ftol,fret
+ real,dimension(idim) 	:: y_y,hh,yyd
+ real,dimension(idim)	:: yy,hh_re,hh_im,hht_re,hht_im,w_re,w_im,w0,w1
+ common/dcv0/nn,nn1,hh_nx,alpha,yy,hh_re,hh_im,hht_re,hht_im,w_re,w_im,w0,w1
+
+! Transfer to be compatible with common block:
+nn = n_n; nn1 = nn_1; alpha = alph_a; yy = y_y; hh_nx = hh_n_x
+
+! Just in case...
+yy(nn+1:idim)=0.
+
+! Compute transfer function:
+hh_re = hh; hh_im = 0.;
+call fft_float(hh_re,hh_im,nn1,1,1);
+
+! Compute FFT function of reversed PSF:
+! Length of the support of hh is hh_nx 
+hht_re =0.; hht_re(1:hh_nx) = hh(hh_nx:1:-1); hht_im = 0.;
+call fft_float(hht_re,hht_im,nn1,1,1);
+
+! Check if gradient is OK
+!call dcv_check_grad(yyd,w0,w1,func,nn)
+
+! Starting point:
+    yyd = 0. 
+! Tolerance
+    ftol=1.e-6
+    call frprmn(yyd,nn,ftol,iter,fret)
+    write(6,11) iter,fret
+11  format(" Number of iterations:",I4,/,&
+           " Value of the minimum:",E12.5)
+return
+end subroutine dcv_gmark
+!*************************************************************
+! Function E to be minimized for Gauss-Markov 
+! E : value of the criterium in X
+!                     \---             2
+! E = |Y-Ax|^2+ alpha  >   | x   - x  | 
+!                     /___    i+1   i
+!                      i
+!
+!*************************************************************
+real function func_gmark(xx)
+ implicit none
+ integer,parameter	:: idim=512
+ integer		:: nn,nn1,hh_nx
+ real			:: alpha
+ real,dimension(idim)	:: xx
+ real,dimension(idim)	:: yy,hh_re,hh_im,hht_re,hht_im,w_re,w_im,w0,w1
+ common/dcv0/nn,nn1,hh_nx,alpha,yy,hh_re,hh_im,hht_re,hht_im,w_re,w_im,w0,w1
+
+! Just in case...
+xx(nn+1:idim)=0.
+
+! Convolution = product in Fourier domain:
+! w0 = conv(xx,hh):
+call dcv_conv_hh(xx,w_re,w_im,hh_re,hh_im,w0,w1,nn,nn1)
+w0 = w0 - yy 
+w0(nn+1:idim)=0.
+
+! Bauman & Sauer' function with p=2:
+!        _
+!        \             p
+! phi =  / | x   - x  |
+!        -    i+1   i
+!        i
+! (Smooth function, which reduces the variation between two successive pixels)
+!
+w1(1:nn-1) = xx(2:nn); w1(nn:idim)=0.
+
+func_gmark = sum(w0**2) + alpha * sum((w1-xx)**2)
+
+return
+end function func_gmark
+!*************************************************************
+! Gradient to be minimized for Gauss-Markov 
+! grad_Er : value of the gradient of the criterium in X
+!                                       (                 \---
+! This subroutine returns  grad(E) =grad( |Y-Ax|^2+ alpha  >    phi(Xs-Xr)
+!                                       (                 /___
+!                                                      (s,r) in C
+!
+! d/dx (HX - Y)^T (HX - Y) = 2 H^T (HX - Y)
+!*************************************************************
+subroutine dfunc_gmark(xx,dx)
+ implicit none
+ integer,parameter	:: idim=512
+ integer		:: nn,nn1,hh_nx,i
+ real			:: alpha
+ real,dimension(idim)	:: xx,dx
+ real,dimension(idim)	:: yy,hh_re,hh_im,hht_re,hht_im,w_re,w_im,w0,w1
+ common/dcv0/nn,nn1,hh_nx,alpha,yy,hh_re,hh_im,hht_re,hht_im,w_re,w_im,w0,w1
+
+! Just in case...
+xx(nn+1:idim)=0.
+
+! Convolution = product in Fourier domain:
+! w0 = conv(xx,hh):
+call dcv_conv_hh(xx,w_re,w_im,hh_re,hh_im,w0,w1,nn,nn1)
+w0(nn+1:idim) = 0.
+
+dx = w0 - yy;
+
+call dcv_conv_hh(dx,w_re,w_im,hht_re,hht_im,w0,w1,nn,nn1)
+w0(1:nn) = w0(hh_nx:nn+hh_nx-1) 
+w0(nn+1:idim) = 0.;
+
+! Gradient of Bauman & Sauer' function with p=2:
+!        _
+!        \             2
+! phi =  / | x   - x  |
+!        -    i+1   i
+!        i
+! (Smooth function, which reduces the variation between two successive pixels)
+!
+
+dx(1) = 2*w0(1) - 2*alpha*(xx(2)-xx(1))
+do i=2,nn-1
+ dx(i) = 2*w0(i) - 2*alpha*(xx(i+1)-xx(i)) + 2*alpha*(xx(i)-xx(i-1))
+end do
+dx(nn) = 2*w0(nn) + 2*alpha*(xx(nn)-xx(nn-1))
+
+ return
+end subroutine dfunc_gmark
+!*************************************************************
+! Deconvolution with MEM 
+! Criterium to minimize is:
+! || y - H x ||^2 + alpha Sigma_{k=1}^{k=N} x_k^2
+!*************************************************************
+subroutine dcv_mem(y_y,hh,yyd,n_n,nn_1,alph_a,hh_n_x,iter)
+ implicit none
+ integer,parameter	:: idim=512
+ integer        	:: nn,n_n,nn1,nn_1,iter,hh_nx,hh_n_x
+ real			:: alph_a,alpha,ftol,fret
+ real,dimension(idim) 	:: y_y,hh,yyd
+ real,dimension(idim)	:: yy,hh_re,hh_im,hht_re,hht_im,w_re,w_im,w0,w1
+ common/dcv0/nn,nn1,hh_nx,alpha,yy,hh_re,hh_im,hht_re,hht_im,w_re,w_im,w0,w1
+
+! Transfer to be compatible with common block:
+nn = n_n; nn1 = nn_1; alpha = alph_a; yy = y_y; hh_nx = hh_n_x;
+
+! Just in case...
+yy(nn+1:idim)=0.
+
+! Compute transfer function:
+hh_re = hh; hh_im = 0.;
+call fft_float(hh_re,hh_im,nn1,1,1);
+
+! Compute FFT function of reversed PSF:
+! Length of the support of hh is hh_nx 
+hht_re =0.; hht_re(1:hh_nx) = hh(hh_nx:1:-1); hht_im = 0.;
+call fft_float(hht_re,hht_im,nn1,1,1);
+
+! Starting point:
+    yyd = 0. 
+! Tolerance
+    ftol=1.e-6
+    call frprmn(yyd,nn,ftol,iter,fret)
+    write(6,11) iter,fret
+11  format(" Number of iterations:",I4,/,&
+           " Value of the minimum:",E12.5)
+return
+end subroutine dcv_mem
+!*************************************************************
+! Function E to be minimized for MEM 
+! E : value of the criterium in X
+!                                               \---
+! This subroutine returns   E = |Y-Ax|^2+ alpha  >    phi(Xs-Xr)
+!                                               /___
+!                                              (s,r) in C
+!
+!*************************************************************
+real function func_mem(xx)
+ implicit none
+ integer,parameter	:: idim=512
+ integer		:: nn,nn1,hh_nx
+ real			:: alpha
+ real,dimension(idim)	:: xx,phi_ent
+ real,dimension(idim)	:: yy,hh_re,hh_im,hht_re,hht_im,w_re,w_im,w0,w1
+ common/dcv0/nn,nn1,hh_nx,alpha,yy,hh_re,hh_im,hht_re,hht_im,w_re,w_im,w0,w1
+
+! Just in case...
+xx(nn+1:idim)=0.
+
+! Convolution = product in Fourier domain:
+! w0 = conv(xx,hh):
+call dcv_conv_hh(xx,w_re,w_im,hh_re,hh_im,w0,w1,nn,nn1)
+w0 = w0 - yy 
+w0(nn+1:idim)=0.
+
+! Entropy potential function:
+!        _
+!        \     
+! phi =  /   x log(x )
+!        -    i     i
+!        i
+where(xx > 0.) 
+  phi_ent = xx*log(xx);
+elsewhere
+  phi_ent = 1000.;
+endwhere
+
+func_mem = sum(w0**2) + alpha * sum(phi_ent)
+
+return
+end function func_mem
+!*************************************************************
+! Gradient to be minimized for MEM 
+! grad_Er : value of the gradient of the criterium in X
+!                                       (                 \---
+! This subroutine returns  grad(E) =grad( |Y-Ax|^2+ alpha  >    phi(Xs-Xr)
+!                                       (                 /___
+!                                                      (s,r) in C
+!
+! d/dx (HX - Y)^T (HX - Y) = 2 H^T (HX - Y)
+!*************************************************************
+subroutine dfunc_mem(xx,dx)
+ implicit none
+ integer,parameter	:: idim=512
+ integer		:: nn,nn1,hh_nx
+ real			:: alpha
+ real,dimension(idim)	:: xx,dx,dphi_ent
+ real,dimension(idim)	:: yy,hh_re,hh_im,hht_re,hht_im,w_re,w_im,w0,w1
+ common/dcv0/nn,nn1,hh_nx,alpha,yy,hh_re,hh_im,hht_re,hht_im,w_re,w_im,w0,w1
+
+! Just in case...
+xx(nn+1:idim)=0.
+
+! Convolution = product in Fourier domain:
+! w0 = conv(xx,hh):
+call dcv_conv_hh(xx,w_re,w_im,hh_re,hh_im,w0,w1,nn,nn1)
+w0(nn+1:idim) = 0.
+
+dx = w0 - yy;
+
+call dcv_conv_hh(dx,w_re,w_im,hht_re,hht_im,w0,w1,nn,nn1)
+w0(1:nn) = w0(hh_nx:nn+hh_nx-1) 
+w0(nn+1:idim) = 0.;
+
+! Gradient de la fonction potentiel entropique
+!        _
+!        \     
+! phi =  /   x log(x )
+!        -    i     i
+! => dphi = sum(1 + log(x)):
+where(xx > 0.) 
+  dphi_ent = 1. + log(xx);
+elsewhere
+  dphi_ent = -1000.;
+endwhere
+
+dx = 2*w0 + alpha*dphi_ent
+
+!print *,'sum(xx): ',sum(xx),' max xx: ',maxval(xx),' min xx: ',minval(xx)
+!print *,'sum(dx): ',sum(dx),' max dx: ',maxval(dx),' min dx: ',minval(dx)
+
+ return
+end subroutine dfunc_mem
+!*************************************************************
+! Deconvolution by Tikhonov's regularisation 
+! Criterium to minimize is:
+! || y - H x ||^2 + alpha Sigma_{k=1}^{k=N} x_k^2
+!*************************************************************
+subroutine dcv_tikhonov(y_y,hh,yyd,n_n,nn_1,alph_a,hh_n_x,iter)
+ implicit none
+ integer,parameter	:: idim=512
+ integer        	:: nn,n_n,nn1,nn_1,iter,hh_nx,hh_n_x
+ real			:: alph_a,alpha,ftol,fret
+ real,dimension(idim) 	:: y_y,hh,yyd
+ real,dimension(idim)	:: yy,hh_re,hh_im,hht_re,hht_im,w_re,w_im,w0,w1
+ common/dcv0/nn,nn1,hh_nx,alpha,yy,hh_re,hh_im,hht_re,hht_im,w_re,w_im,w0,w1
+
+! Transfer to be compatible with common block:
+nn = n_n; nn1 = nn_1; alpha = alph_a; yy = y_y; hh_nx = hh_n_x;
+
+print *,'alpha=',alpha,' nn=',nn,' nn1=',nn1
+
+! Just in case...
+yy(nn+1:idim)=0.
+
+! Compute transfer function:
+hh_re = hh; hh_im = 0.;
+call fft_float(hh_re,hh_im,nn1,1,1);
+
+! Compute FFT function of reversed PSF:
+! Length of the support of hh is hh_nx 
+hht_re =0.; hht_re(1:hh_nx) = hh(hh_nx:1:-1); hht_im = 0.;
+call fft_float(hht_re,hht_im,nn1,1,1);
+
+! Starting point:
+    yyd = 0. 
+! Tolerance
+    ftol=1.e-6
+    call frprmn(yyd,nn,ftol,iter,fret)
+    write(6,11) iter,fret
+11  format(" Number of iterations:",I4,/,&
+           " Value of the minimum:",E12.5)
+return
+end subroutine dcv_tikhonov
+!*************************************************************
+! Function E to be minimized for Tikhonov's regularisation:
+! E : value of the criterium in X
+!                                               \---
+! This subroutine returns   E = |Y-Ax|^2+ alpha  >    phi(Xs-Xr)
+!                                               /___
+!                                              (s,r) in C
+!
+!*************************************************************
+real function func_tikho(xx)
+ implicit none
+ integer,parameter	:: idim=512
+ integer		:: nn,nn1,hh_nx
+ real			:: alpha
+ real,dimension(idim)	:: xx
+ real,dimension(idim)	:: yy,hh_re,hh_im,hht_re,hht_im,w_re,w_im,w0,w1
+ common/dcv0/nn,nn1,hh_nx,alpha,yy,hh_re,hh_im,hht_re,hht_im,w_re,w_im,w0,w1
+
+! Just in case...
+xx(nn+1:idim)=0.
+
+! Convolution = product in Fourier domain:
+! w0 = conv(xx,hh):
+call dcv_conv_hh(xx,w_re,w_im,hh_re,hh_im,w0,w1,nn,nn1)
+w0 = w0 - yy 
+w0(nn+1:idim)=0.
+
+! Bauman & Sauer's potential function, with p=2
+!        _
+!        \        p
+! phi =  /  | x  |
+!        -     i
+!        i
+!  phi = sum(abs(real(x(:))).^p);
+!  dphi = p*sign(x).*(abs(real(x)).^(p-1));
+func_tikho = sum(w0**2) + alpha * sum(xx**2) 
+
+return
+end function func_tikho
+!*************************************************************
+! Gradient to be minimized for Tikhonov's regularisation:
+! grad_Er : value of the gradient of the criterium in X
+!                                       (                 \---
+! This subroutine returns  grad(E) =grad( |Y-Ax|^2+ alpha  >    phi(Xs-Xr)
+!                                       (                 /___
+!                                                      (s,r) in C
+!
+! d/dx (HX - Y)^T (HX - Y) = 2 H^T (HX - Y)
+!*************************************************************
+subroutine dfunc_tikho(xx,dx)
+ implicit none
+ integer,parameter	:: idim=512
+ integer		:: nn,nn1,hh_nx
+ real			:: alpha
+ real,dimension(idim)	:: xx,dx
+ real,dimension(idim)	:: yy,hh_re,hh_im,hht_re,hht_im,w_re,w_im,w0,w1
+ common/dcv0/nn,nn1,hh_nx,alpha,yy,hh_re,hh_im,hht_re,hht_im,w_re,w_im,w0,w1
+
+! Just in case...
+xx(nn+1:idim)=0.
+
+! Convolution = product in Fourier domain:
+! w0 = conv(xx,hh):
+call dcv_conv_hh(xx,w_re,w_im,hh_re,hh_im,w0,w1,nn,nn1)
+w0(nn+1:idim) = 0.
+
+dx = w0 - yy;
+
+call dcv_conv_hh(dx,w_re,w_im,hht_re,hht_im,w0,w1,nn,nn1)
+w0(1:nn) = w0(hh_nx:nn+hh_nx-1) 
+w0(nn+1:idim) = 0.;
+
+! Bauman & Sauer's potential function, with p=2
+!        _
+!        \        p
+! phi =  /  | x  |
+!        -     i
+!        i
+!  dphi = p*sign(x).*(abs(real(x)).^(p-1));
+! here: dphi = 2 x
+!
+ dx = 2*w0 + 2*alpha*xx
+
+!print *,'sum(xx): ',sum(xx),' max xx: ',maxval(xx),' min xx: ',minval(xx)
+!print *,'sum(dx): ',sum(dx),' max dx: ',maxval(dx),' min dx: ',minval(dx)
+
+ return
+end subroutine dfunc_tikho
+!*************************************************************
+! Banana function : start at X=[-1.9;2]. minimum at X=[1;1] : f(X)=0;
+! z = 100*(x(2)-x(1))^2 + (1-x(1))^2
+!  dx = [  -200*(x(2) - x(1))-2*(1-x(1)); 200*(x(2)-x(1)) ];
+!
+!*************************************************************
+subroutine dcv_banana
+ implicit none
+ integer,parameter    		:: n=2
+ integer			:: iter
+ real,dimension(n) 		:: p
+ real				:: ftol,fret
+ write(6,*) "Test with Banana function"
+
+! Starting point:
+    p(1)= -1.9
+    p(2)= 2.
+! Tolerance
+    ftol=1.e-6
+    call frprmn(p,n,ftol,iter,fret)
+    write(6,11) p(1),p(2),iter,fret
+11  format(" Location of the minimum:",2(F12.3,1X),/,&
+           " Number of iterations:",I4,/,&
+           " Value of the minimum:",E12.5)
+return 
+end subroutine dcv_banana
+!*********************************************************
+! Banana function:
+! z = 100*(x(2)-x(1))^2 + (1-x(1))^2
+!*********************************************************
+real function func_banana(x)
+ implicit none
+ real,dimension(2)	:: x
+ func_banana = (1. - x(1))**2 + 100*(x(2) - x(1))**2
+end function func_banana
+!*********************************************************
+! Banana function:
+!  dx = [  -200*(x(2) - x(1))-2*(1-x(1)); 200*(x(2)-x(1)) ];
+!*********************************************************
+subroutine dfunc_banana(x,dx)
+ implicit none
+ real,dimension(2)	:: x,dx
+ dx(1) = -200*(x(2)-x(1)) - 2*(1-x(1))
+ dx(2) = 200*(x(2)-x(1))
+ return
+end subroutine dfunc_banana
+!*********************************************************
+! Function to be minimized:
+!*********************************************************
+real function func(x)
+ implicit none
+ character(len=5)	:: option
+! For banana:
+! integer,parameter	:: idim=2
+! Else:
+ integer,parameter	:: idim=512
+ real,dimension(idim)	:: x
+ real,external		:: func_tikho,func_banana,func_mem,func_gmark
+ common/dcv_option/option
+
+select case(option)
+  case('banan')
+    func = func_banana(x) 
+  case('tikho')
+    func = func_tikho(x) 
+  case('maxen')
+    func = func_mem(x) 
+  case('gmark')
+    func = func_gmark(x) 
+  case default
+    print *,' func/Fatal error: invalid option'
+    stop
+end select
+
+return
+end function func
+!*********************************************************
+! Gradient function for minimisation:
+!*********************************************************
+subroutine dfunc(x,dx)
+ implicit none
+ character(len=5)	:: option
+! For banana:
+! integer,parameter	:: idim=2
+! Else:
+ integer,parameter	:: idim=512
+ real,dimension(idim)	:: x,dx
+
+ common/dcv_option/option
+
+select case(option)
+  case('banan')
+    call dfunc_banana(x,dx)
+  case('tikho')
+    call dfunc_tikho(x,dx)
+  case('maxen')
+    call dfunc_mem(x,dx)
+  case('gmark')
+    call dfunc_gmark(x,dx)
+  case default
+    print *,' dfunc/Fatal error: invalid option'
+    stop
+end select
+
+ return
+end subroutine dfunc
+!*************************************************************
+! Deconvolution by Wiener filter
+!*************************************************************
+subroutine dcv_wiener(yy,hh,yyd,w0,w1,nn,nn1,alpha)
+ implicit none
+ integer        		:: nn,nn1
+ real,dimension(nn1) 		:: yy,hh,yyd,w0,w1
+ real,dimension(:),allocatable	:: yy_re,yy_im,hh_re,hh_im,w_re,w_im
+ real				:: alpha
+
+allocate(yy_re(nn1)); allocate(yy_im(nn1)); 
+allocate(hh_re(nn1)); allocate(hh_im(nn1)); 
+allocate(w_re(nn1)); allocate(w_im(nn1)); 
+
+! Compute FFT of signal: 
+yy_re = yy; yy_im = 0.;
+call fft_float(yy_re,yy_im,nn1,1,1);
+
+! Compute transfer function:
+hh_re = hh; hh_im = 0.;
+call fft_float(hh_re,hh_im,nn1,1,1);
+
+w0 = hh_re*hh_re + hh_im*hh_im;
+
+! 1/(a+ib) = (a-ib)/(a2+b2)
+! Wiener filter = ((a2+b2) / ((a2+b2) + alpha)) / (a+ib)
+! Hence:        = (a-ib) / ((a2+b2) + alpha))
+ w_re = hh_re / (w0 + alpha);
+ w_im = - hh_im / (w0 + alpha);
+
+! Plot Wiener filter:
+if(.false.)then
+  print *," Display Wiener filter"
+  w1 = w_re*w_re + w_im*w_im;
+  call dcv_plot1_log(w1,nn1,"Wiener filter")
+endif
+
+! Deconvolution:
+w0 = w_re*yy_re - w_im*yy_im
+w1 = w_re*yy_im + w_im*yy_re
+call fft_float(w0,w1,nn1,1,-1);
+yyd = 0.; yyd(1:nn) = w0(1:nn)
+
+deallocate(yy_re); deallocate(yy_im); 
+deallocate(hh_re); deallocate(hh_im); 
+deallocate(w_re); deallocate(w_im); 
+return 
+end subroutine dcv_wiener
+!*************************************************************
+! Deconvolution by spectral division 
+!*************************************************************
+subroutine dcv_spdiv(yy,hh,yyd,w0,w1,nn,nn1)
+ implicit none
+ integer        		:: nn,nn1
+ real,dimension(nn1) 		:: yy,hh,yyd,w0,w1
+ real,dimension(:),allocatable	:: yy_re,yy_im,hh_re,hh_im,w_re,w_im
+
+allocate(yy_re(nn1)); allocate(yy_im(nn1)); 
+allocate(hh_re(nn1)); allocate(hh_im(nn1)); 
+allocate(w_re(nn1)); allocate(w_im(nn1)); 
+
+! Compute FFT of signal: 
+yy_re = yy; yy_im = 0.;
+call fft_float(yy_re,yy_im,nn1,1,1);
+
+! Compute transfer function:
+hh_re = hh; hh_im = 0.;
+call fft_float(hh_re,hh_im,nn1,1,1);
+
+w0 = hh_re*hh_re + hh_im*hh_im;
+
+! 1/(a+ib) = (a-ib)/(a2+b2)
+ w_re = hh_re / w0;
+ w_im = - hh_im / w0;
+
+! Plot inverse filter:
+if(.false.)then
+  print *," Display inverse filter"
+  w1 = w_re*w_re + w_im*w_im;
+  call dcv_plot1_log(w1,nn1,"Inverse filter")
+endif
+
+! Deconvolution:
+w0 = w_re*yy_re - w_im*yy_im
+w1 = w_re*yy_im + w_im*yy_re
+call fft_float(w0,w1,nn1,1,-1);
+yyd = 0.; yyd(1:nn) = w0(1:nn)
+
+deallocate(yy_re); deallocate(yy_im); 
+deallocate(hh_re); deallocate(hh_im); 
+deallocate(w_re); deallocate(w_im); 
+return 
+end subroutine dcv_spdiv
+!*************************************************************
+! Display input files (to check if OK)
+!*************************************************************
+subroutine dcv_display_input(yy0,yy,hh,w0,w1,nn,nn1)
+ implicit none
+ integer        		:: nn,nn1
+ real,dimension(nn1) 		:: yy,hh,yy0,w0,w1
+ logical,parameter		:: display_all=.true.
+ character(len=40)		:: title
+
+! Display original signal:
+if(display_all)then
+  write(6,*) "Display original signal:"
+  title="Original signal"; 
+  call dcv_plot1(yy0,nn,title)
+endif
+
+! Compute power spectrum of original signal:
+  w0=yy0; w1=0.;
+  call fft_float(w0,w1,nn1,1,1);
+  w0 = w0*w0 + w1*w1;
+  call recent_fft_1d_x_float(w0,w0,nn1,1,nn1);
+
+! Display power spectrum of original signal:
+if(display_all)then
+  write(6,*) "Display power spectrum of original signal:"
+  title="Power spectrum of original signal" 
+  call dcv_plot1_log(w0,nn1,title)
+endif
+
+! Compute transfer function:
+  w0=hh; w1=0.;
+  call fft_float(w0,w1,nn1,1,1);
+  w0 = w0*w0 + w1*w1;
+  call recent_fft_1d_x_float(w0,w0,nn1,1,nn1);
+
+! Display Transfer function:
+if(display_all)then
+  write(6,*) "Frequency response of the filter:"
+  title="Frequency response of the filter" 
+  call dcv_plot1_log(w0,nn1,title)
+endif
+
+return
+end subroutine dcv_display_input
+!*************************************************************
+! Convolution H*X :  w0 = conv(xx,hh)
+!
+! IN:
+! xx: function to be convolved by hh
+! hh_re, hh_im: TF of hh
+!
+! OUT:
+! w0 = conv(hh,xx)
+!
+! Workspace:
+! w_re,w_im,w1
+!*************************************************************
+subroutine dcv_conv_hh(xx,w_re,w_im,hh_re,hh_im,w0,w1,nn,nn1)
+ implicit none
+ integer,parameter	:: idim=512
+ integer		:: nn,nn1
+ real,dimension(idim)	:: xx,hh_re,hh_im,w_re,w_im,w0,w1
+
+! Convolution = product in Fourier domain:
+
+! Compute FFT of xx: 
+w_re = xx; w_im = 0.;
+call fft_float(w_re,w_im,nn1,1,1);
+
+! Product in Fourier domain:
+w0 = w_re*hh_re - w_im*hh_im
+w1 = w_re*hh_im + w_im*hh_re
+
+! Back to direct space:
+call fft_float(w0,w1,nn1,1,-1);
+
+return
+end subroutine dcv_conv_hh
+!*************************************************************
+! Check the validity of the gradient
+! and compare f(x+dx)-f(x)/dx with grad_f(x)
+!
+! x1,x2,dx: work space of dimension nn
+!*************************************************************
+subroutine dcv_check_grad(x1,x2,dx,func,nn)
+ implicit none
+ integer,parameter	:: idim=512
+ integer                :: nn,i
+ real,parameter		:: eps=1.e-4,tolerance=1.e-4
+ real			:: f_x2,f_x1,error,func
+ real,dimension(idim)    :: x1,x2,dx
+
+! Generate random vector (between 0 and 1)
+call random_seed; 
+call random_number(x1);
+f_x1 = func(x1) 
+
+! Loop on all components:
+do i=1,nn
+   x2 = x1;
+   x2(i) = x1(i) + eps
+   f_x2 = func(x1) 
+   call dfunc(x1,dx)
+   error = (f_x2 - f_x1)/eps - dx(i)*eps
+   error = error / abs(f_x1 + 1.e-12)
+   if(error > tolerance)then
+      print *,'dcv_check_grad/Error!'
+      write(6,12) i,error
+12    format('i=',I4,' relative error =',E10.4)
+   endif
+end do
+
+
+return
+end subroutine dcv_check_grad

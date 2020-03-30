@@ -1,0 +1,204 @@
+\chapter{Mise en \oe uvre de méthodes de déconvolution}
+
+\centerline{\large \sl Jean-Louis Prieur, LA2T, OMP, UPS-CNRS} 
+
+\centerline{\large \sl Version \today}
+
+\bigskip
+Dans ce chapitre, je décris quelques méthodes de déconvolution
+que j'ai mises en \oe uvre de façon concrète.
+L'idée initiale était d'écrire un logiciel 
+permettant de tester et comparer plusieurs 
+méthodes de déconvolution, parmi les plus connues en analyse
+numérique, afin de déconvoluer des images astronomiques. 
+
+J'ai commencé par reproduire les simulations à une dimension
+d'Hervé Carfantan (simulations \#~1 et~2), 
+initialement faites en "matlab", puis
+je les ai étendues à 2 dimensions.
+Ces programmes ont d'abord été écrits en Fortran 95, car ce langage 
+est particulièrement bien adapté au calcul matriciel. Cependant, 
+des problèmes de compatibilité entre différents compilateurs, m'ont
+contraint à les traduire en C.
+
+Enfin, dans la section~\ref{sec:dcv-diane}, je décris avec plus de détails
+la méthode régularisée avec contrainte de support développée par notre équipe.
+
+%%%%%%%%%%
+\section{Simulation des données}
+\label{sec:dcv-simu}
+
+Pour la simulation \#~1, l'objet $y_0(i)$ 
+et la réponse impulsionnelle $h(i)$, qui est un filtre d'intégration,
+sont directement générés par le programme {\tt "dcv\_test1.f90" option=1}
+(cf. Fig.~\ref{fig:s1-signal}).
+
+Pour la simulation \#~2, l'objet $y_0(i)$ est un spectre de raies 
+et la réponse impulsionnelle $h(i)$ est une fonction ondelette
+(cf. Fig.~\ref{fig:s2-signal}).
+Il sont générés par le programme {\tt "dcv\_test1.f90" option=2} à partir
+respectivement des fichiers {\tt bgg.asc} et {\tt ricker\_ri.asc}. 
+
+Dans le cas à 2 dimensions (simulation \#~5),
+l'objet $y_0(i,j)$ et la réponse impulsionnelle $h(i,j)$ sont générés 
+par le programme {\tt "object\_cerga"}
+dérivé d'un programme de P.~Cruzalèbes. 
+%% Simulation 3 et 4: échec, car il existe un fond non uniforme
+% L'objet est constitué d'un disque assombri sur les bords, sur lequel sont
+% superposés des détails à haute
+% résolution spatiale (Fig.~\ref{fig:s3-simu}a). 
+L'objet est constitué d'un anneau et d'autres détails à haute
+résolution spatiale (Fig.~\ref{fig:s5-simu}a). 
+La réponse
+impulsionnelle correspond au premier lobe d'une fonction d'Airy.
+
+L'objet est tout d'abord convolué par la réponse impulsionnelle:
+$y = h \star y_0$, puis bruité. 
+
+Pour générer le signal bruité $y_b$ (Fig.~\ref{fig:s5-simu}b), 
+pour chaque pixel $(i,j)$ 
+on ajoute à la valeur du signal $y(i,j)$ 
+un nombre aléatoire $r_{i,j}$ 
+(uniforme entre 0 et 1, et donc de variance 1/12) 
+centré et multiplié par un facteur de normalisation noté $g$:
+\begin{equation}
+y_b(i,j) = h \star y_0(i,j) + g \times (r_{i,j} - 0.5)
+\qquad {\rm avec} \quad g^2 = 12 \times 10^{- {\it SNR}/10} 
+\times {\sum_{i,j} y_0(i,j)^2 \over N} 
+\end{equation}
+où $N$ est le nombre total de pixels 
+et {\it SNR} est la valeur du rapport signal sur bruit en dB (défini
+ici comme le rapport de la variance du signal sur celle du bruit).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Méthodes disponibles avec dcv\_deconv}
+
+On minimise la fonctionnelle suivante:
+\begin{equation}
+q(x) = || y_b - H x ||^2 + \alpha \, \Phi(x) 
+\end{equation}
+où $H$ est l'opérateur de convolution 
+et $\Phi(x)$ est une fonction de régularisation.
+soit encore, en notant $Y$ et $X$ les matrices colonnes correspondant
+respectivement aux fonctions $y_b$ et $x$:
+$$ 
+q(X) = ( Y - H X)^T ( Y - H X) + \alpha \, \Phi(X) 
+$$
+
+Le gradient de $q(x)$ est alors:
+\begin{equation}
+{\rm d}q(X) = - 2 H^T ( Y - H X) + \alpha \, {\rm d}\Phi(X) 
+\end{equation}
+
+Notons que $H x = U^{-1} \hat{h} \times U x$ 
+et $H^T z = U^{-1} \hat{h'} \times U z$, avec $h'(x)=h(-x)$ et
+en notant $U$ l'opérateur de transformée de Fourier. 
+
+Mes deux programmes {\tt "dcv\_deconv\_1D"},
+{\tt "dcv\_deconv\_2D"} permettent de déconvoluer 
+par un filtrage de Wiener ou simple division spectrale, ou bien 
+d'utiliser les fonctions de régularisation décrites 
+dans le tableau~\ref{tab:phi}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[h]
+\centering
+{\small
+\begin{tabular}{|c|c|c|}
+\hline
+ & & \cr
+Méthode & $\Phi(x)$ & d$\Phi(x)$ \cr
+ & & \cr
+\hline
+ & & \cr
+%%%
+Tikhonov & $\displaystyle \sum_{i,j} x_{i,j}^2$ &  $2 \, x_{i,j}$ \cr 
+ & & \cr
+\hline
+ & & \cr
+%%%
+Gauss généralisé & $\displaystyle \sum_{i,j} |x_{i,j}|^{1.1}$ 
+&  $0.1 \, x_{i,j}^{0.1} \times sign(x_{i,j})$ \cr 
+ & & \cr
+\hline
+ & & \cr
+%%%
+Max. d'entropie 
+& $\displaystyle \sum_{i,j} x_{i,j} \log\left[x_{i,j}\right]$ 
+&  $1  + \log\left[x_{i,j}\right]$ \cr 
+ & & \cr
+\hline
+ & & \cr
+%%%
+$\sqrt{s^2+x^2}$ & $\displaystyle \sum_{i,j} \sqrt{s^2+x_{i,j}^2}$ 
+&  $\displaystyle {x_{i,j} \over \sqrt{s^2+x_{i,j}^2}}$ \cr 
+ & & \cr
+\hline
+ & & \cr
+%%%
+Gauss-Markov & $\displaystyle \sum_{i,j} 
+\left[ x_{i+1,j} - x_{i,j} \right]^2  
++ \left[ x_{i,j+1} - x_{i,j} \right]^2$ 
+& $-2 \, \left[ x_{i+1,j} - x_{i,j} \right]  
++ 2 \, \left[ x_{i,j} - x_{i-1,j} \right] + \ldots$ \cr 
+ & & \cr
+%%%
+\hline
+\end{tabular}
+% End small fonts
+}
+\caption{Fonctions de régularisation et gradients associés, pour
+les méthodes actuellement disponibles.}
+\label{tab:phi}
+\end{table}
+
+La minimisation peut être effectuée par deux méthodes:
+gradients conjugués ou L-BFGS-B.
+
+La méthode des gradients
+conjugués utilisée est celle de Polak-Ribière 
+(dérivée de la méthode de Fletcher-Reeves) 
+avec la fonction {\sl ``frprmn"} de {\sl ``Numerical Recipees"}. 
+J'ai modifié le critère d'arrêt
+et je fais un double test sur la variation relative de $q(x)$ 
+et de la norme L2 de $x$. 
+La minimisation dans une direction donnée se fait {\sl "dbrent"}
+qui utilise une méthode dérivée de celle 
+de Brent avec une interpolation parabolique.
+
+La méthode L-BFGS-B 
+(R.H. Byrd, P. Lu, J. Nocerdal, C. Zhu, ``A limited
+memory algorithm for bound constrained optimization'',
+SIAM Journal on Scientific Computing, 16, 5, pp 1190-1208) 
+est une méthode d'optimisation avec contraintes
+de type ``quasi-Newton'', qui fait une utilisation optimale de
+la mémoire et qui est bien adaptée à la résolution de grands systèmes.
+Elle utilise aussi le gradient de la fonctionnelle $f$ à minimiser, mais
+la connaissance du Hessien n'est pas nécessaire. A chaque itération,
+elle calcule une approximation du Hessien qui permet de définir un modèle
+quadratique de $f$. Une direction de recherche est déterminée en deux étapes:
+d'abord, une méthode de projection du gradient permet d'identifier
+les variables ``actives'' (i.e., celles qui seront maintenues
+constantes sur leur limite), et ensuite le modèle quadratique est 
+minimisé par rapport aux variables libres. La direction de recherche
+est alors définie par le vecteur ayant pour extrémités le point
+de l'itération précédente et le point de minimisation approximatif 
+ainsi obtenu. Enfin une minimisation complète est faite le long
+de cette direction de recherche.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Résultats du traitement avec dcv\_deconv}
+
+Nous présentons maintenant les résultats obtenus lors
+de la mise en \oe uvre du programme {\tt dcv\_deconv} dans les trois
+cas décrits dans la section~\ref{sec:dcv-simu}:
+\begin{itemize}
+\item[Simulation \#1:]{Cas monodimensionnel, avec un profil discontinu; 
+}
+\item[Simulation \#2:]{Cas monodimensionnel, avec un spectre de raies;
+}
+\item[Simulation \#5:]{Cas bidimensionnel, avec un anneau et des sources 
+ponctuelles.
+}
+\end{itemize}
+

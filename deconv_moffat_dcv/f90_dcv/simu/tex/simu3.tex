@@ -1,0 +1,48 @@
+%% Simulation No3
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\centerline{\epsfxsize=7.5cm\epsfbox{s3_yy0.ps}
+\epsfxsize=7.5cm\epsfbox{s3_yyb.ps}}
+\vskip 1mm
+\centerline{\epsfxsize=7.5cm\epsfbox{s3_wiener_08.ps}
+\epsfxsize=7.5cm\epsfbox{s3_tikho_1.ps}}
+\vskip 1mm
+\centerline{\epsfxsize=7.5cm\epsfbox{s3_ggauss_1.ps}
+\epsfxsize=7.5cm\epsfbox{s3_mem_01.ps}}
+\caption{Simulation \#3. 
+De gauche à droite et de haut en bas: 
+objet original, 
+image filtrée et bruité avec SNR=20 dB,
+déconvolution par filtre de Wiener ($\alpha$=0.8, erreur rms=0.0521),
+avec régularisation de Tikhonov 
+($\alpha$=1, it=317, rms=0.0520), 
+avec régularisation généralisée de Gauss
+(p=1.1, $\alpha$=1, it=534, rms=0.0521), 
+avec maximum d'entropie
+($\alpha$=0.1, it=46, rms=0.0519), 
+Pour la déconvolution, le critère d'arrêt a été fixé à $10^{-6}$.}
+\label{fig:s3-simu}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\centerline{\epsfxsize=7.5cm\epsfbox{s3_sqrt_1_1.ps}
+\epsfxsize=7.5cm\epsfbox{s3_sqrt_10_1.ps}}
+\caption{Simulation \#3.
+Déconvolution avec régularisation convexe $\sqrt{s^2+x^2}$
+avec $s$=1., $\alpha$=1., it=675, rms=0.0522 (à gauche)
+et $s$=1., $\alpha$=10., it=369, rms=0.0520 (à droite)
+(tolérance = $10^{-6}$).}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\centerline{\epsfxsize=7.5cm\epsfbox{s3_gmark_1.ps}}
+%\epsfxsize=7.5cm\epsfbox{s3_sqrt_1_01.ps}}
+\caption{Simulation \#3.
+Déconvolution avec régularisation Gauss-Markov 
+avec $\alpha$=1., it=354, rms=0.0521 (à gauche)
+%et $s$=0.01, $\alpha$=1., it=74, rms=0.0530 (à droite)
+(tolérance = $10^{-6}$).}
+\end{figure}
+

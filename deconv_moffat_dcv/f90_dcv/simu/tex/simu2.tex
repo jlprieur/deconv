@@ -1,0 +1,65 @@
+%\section{Simulation No1}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\centerline{\epsfxsize=9cm\epsfbox{s2_orig.ps}
+\hskip-1cm\epsfxsize=9cm\epsfbox{s2_pw_orig.ps}}
+\centerline{\epsfxsize=9cm\epsfbox{s2_psf.ps}
+\hskip-1cm\epsfxsize=9cm\epsfbox{s2_pw_psf.ps}}
+\centerline{\epsfxsize=9cm\epsfbox{s2_filt_orig.ps}
+\hskip-1cm\epsfxsize=9cm\epsfbox{s2_pw_filt_orig.ps}}
+\centerline{\epsfxsize=9cm\epsfbox{s2_noisy_sig.ps}
+\hskip-1cm\epsfxsize=9cm\epsfbox{s2_pw_noisy.ps}}
+\caption{Simulation \#2. De bas en haut (à gauche): signal original,
+réponse impulsionnelle du filtre, signal filtré et signal filtré et bruité.
+A droite: spectre de puissance correspondant.}
+\label{fig:s2-signal}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\centerline{\epsfxsize=10cm\epsfbox{s2_inverse.ps}
+\hskip-1cm\epsfxsize=10cm\epsfbox{s2_inverse_filt.ps}}
+\centerline{\epsfxsize=10cm\epsfbox{s2_wiener.ps}
+\hskip-1cm\epsfxsize=10cm\epsfbox{s2_wiener_filt.ps}}
+\caption{Simulation \#2. 
+En haut: simple division spectrale et filtre inverse correspondant.
+En bas: deconvolution par filtre de Wiener et filtre correspondant.}
+\label{fig:s2-wiener}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\centerline{\epsfxsize=15cm\epsfbox{s2_tikho_01.ps}}
+\caption{Simulation \#2. 
+Déconvolution avec régularisation de Tikhonov 
+avec $\alpha$=0.1 (tolérance = $10^{-6}$).}
+\label{fig:s2-tikhonov}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\centerline{\epsfxsize=15cm\epsfbox{s2_ggauss_01.ps}}
+\caption{Simulation \#2. 
+Déconvolution avec régularisation de Gauss généralisé 
+avec p=1.1 avec $\alpha$=0.1 (tolérance = $10^{-6}$).}
+\label{fig:s2-ggauss}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\centerline{\epsfxsize=15cm\epsfbox{s2_sqrt_01_001.ps}}
+\caption{Simulation \#2. 
+Déconvolution avec régularisation convexe $\sqrt{s^2+x^2}$
+avec $s=0.001$ ($\alpha$=0.1, tolérance = $10^{-6}$).}
+\label{fig:s2-sqrt001}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\centerline{\epsfxsize=15cm\epsfbox{s2_sqrt_01_01.ps}}
+\caption{Simulation \#2. 
+Déconvolution avec régularisation convexe $\sqrt{s^2+x^2}$
+avec $s=0.01$ ($\alpha$=0.1, tolérance = $10^{-6}$).}
+\label{fig:s2-sqrt01}
+\end{figure}

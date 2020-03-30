@@ -1,0 +1,61 @@
+static int dcv_2D_check_grad(double *x1, double (*func)(double []), 
+                             void (*dfunc)(double[], double[]));
+/**************************************************************
+* Check the validity of the gradient
+* and compare f(x+dx)-f(x)/dx with grad_f(x)
+*
+* x1,x2,dx: work space of dimension nx * ny
+**************************************************************/
+static int dcv_2D_check_grad(double *x1, double (*func)(double []), 
+                             void (*dfunc)(double[], double[]))
+{
+double *x2, *dx;
+register int i, j;
+int nw, idim;
+double eps=1.e-4, tolerance=1.e-4;
+double f_x2,f_x1,error;
+
+idim = nx * ny + 1;
+if( (x2 = (double *)malloc(idim * sizeof(double))) == NULL
+    || (dx = (double *)malloc(idim * sizeof(double))) == NULL)
+  {
+   printf("dcv_2D_check_grad/Fatal error allocating memory: idim=%d\n",
+           idim);
+   exit(-1);
+  }
+
+printf(" dcv_2D_check_grad/Start checking gradient \n");
+
+/* Generate random vector (between 0 and 1) */
+for(i = 1; i <= nx * ny; i++) x1[i] = (double)rand() / (double)RAND_MAX;
+
+f_x1 = (*func)(x1); 
+
+/* Loop on a subsample of components (too long otherwise): */
+nw = (nx * ny)/2;
+for(i = nw; i < nw + 10; i++)
+   {
+   for(j = 1; j <= nx * ny; j++) x2[j] = x1[j];
+/* Small variation of component #i: */
+   x2[i] = x1[i] + eps;
+   f_x2 = (*func)(x2); 
+   (*dfunc)(x1,dx);
+   error = (f_x2 - f_x1)/eps - dx[i];
+#ifdef DEBUG
+   printf(" x1[%d]=%.3f f_x1=%e f_x2=%e (f_x2 - f_x1)/eps=%e dx[i]=%e error=%e\n",
+            i, x1[i], f_x1, f_x2, (f_x2 - f_x1)/eps, dx[i], error);
+#endif
+/* Relative error: (error with "abs", OK with "ABS") */
+   error /= (ABS(dx[i]) + 1.e-12);
+    if(error > tolerance) {
+      printf("dcv_2D_check_grad/Error! \n");
+      printf("component #i=%d:  relative error =%.4e\n", i, error);
+      }
+   }
+
+printf("dcv_2D_check_grad/gradient is OK. \n");
+
+free(x2);
+free(dx);
+return(0);
+}

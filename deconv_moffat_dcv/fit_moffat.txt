@@ -1,0 +1,18 @@
+###################################################################
+# Example of parameter file 
+# used by "fit_moffat.cpp"
+#
+# JLP
+# Version 23/11/2010
+###################################################################
+Input image: 0050_avg_c 
+Number of stars: 1
+Center1: 69.,63. 
+Center2: 0.,0. 
+Center3: 0.,0. 
+Moffat parameter q: 1.4 
+q is fixed (0=free or 1=fixed): 1 
+FWHM (pixels): 3.0 
+Isophotes (0=elliptical 1=circular): 1 
+Background (0=polynomial 1=constant): 1 
+Fit param. (factr, pgtol, max_niter): 10.,1.e-10,2000 

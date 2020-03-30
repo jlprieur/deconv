@@ -1,0 +1,21 @@
+##################################################################### 
+# Parameters used by "jlp_dcv" 
+# File automatically generated/updated by "jlp_dcv.tcl" 
+# 
+# JLP 
+# Version 07/05/2002 
+##################################################################### 
+# Input PSF: 
+DCV_PSF=s1_psf.fits
+# Input image: 
+DCV_INPUT=s1_raw.fits
+# Output image: 
+DCV_OUTPUT=s1_dec.fits
+# Interactive: 1 if interactive, 0 if batch processing  
+INTERACTIVE=1
+# Deconvolution method: tikho wiener maxen sqrtr ggauss mark
+DCV_METHOD=tikho
+# Alpha: parameter used for regularization
+DCV_ALPHA=1.0
+# ss: parameter used for sqrt method only
+DCV_SS=0.1

@@ -1,0 +1,46 @@
+#############################################
+# Version 04/04/2002
+#############################################
+# To generate simulated data: 1-D case
+#############################################
+runs dcv_test1 with option=1 or option=2
+
+Extensions:
+_yy0.fits : original signal
+_yy.fits  : original signal filtered by PSF
+_yyb.fits : simulated signal: yy+noise
+_psf.fits  : PSF
+
+e.g.:
+Filename: simu1D_yy0.fits  NX = 100 NY = 1
+Comments: Original signal                                                      
+Filename: simu1D_yy.fits  NX = 100 NY = 1
+Comments: Filtered signal                                                      
+Filename: simu1D_yyb.fits  NX = 100 NY = 1
+Comments: Simulated signal                                                     
+Filename: simu1D_psf.fits  NX = 100 NY = 1
+Comments: PSF                                                                  
+
+To display a 1-D FITS file, use plot1, e.g.:
+plot_list_fits.com s1_yy0.fits xterm L0
+
+#############################################
+# To generate simulated data: 2-D case
+#############################################
+Run object_cerga with "object_cerga_s3.com"
+to create: s3_yy0.fits
+Run object_cerga with "object_cerga_s3_psf.com"
+to create: s3_psf.fits
+
+To display a 2-D FITS file, use Xdisp1, e.g.:
+Xdisp1 s3_yy0
+
+#############################################
+# To deconvolve 2-D data:
+#############################################
+Two cases:
+
+Simulation: *_psf,*_yy0 are needed
+
+Real data: *_psf,*_raw are needed
+

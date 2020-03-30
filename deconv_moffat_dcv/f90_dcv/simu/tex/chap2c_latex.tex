@@ -1,0 +1,702 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\def\Rr{R}
+\def\Cc{C}
+\def\Annexmath{A}
+\def\Annexmcarres{B}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Déconvolution régularisée DIANE/WIPE}
+\label{sec:dcv-diane}
+
+Dans ce chapitre, nous présenterons 
+la méthode de déconvolution régularisée proposée par 
+Lannes {\it et al},~1987, et Roques (1987),
+que j'ai adaptée aux problèmes que j'ai rencontrés en astronomie
+(interférométrie des tavelures, images d'optique adaptative, etc).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Déconvolution en présence de bruit}
+
+Considérons l'image $\psi_i(x)$ d'un objet $\phi_0(x)$ par
+un système imageur linéaire de réponse impulsionnelle
+$h(x)$. En présence de bruit, nous avons une relation 
+du type: 
+  $$  %%%% 
+\psi_i (x) = \phi_0 \star h\,(x) + b(x)
+\eqno({\rm II.33})
+  $$
+où $b(x)$ représente le terme de bruit (erreurs de mesure, bruit 
+de détection, mauvaise estimation de $h(x)$, etc).
+La déconvolution consiste à inverser cette équation 
+et à restituer la version la plus fidèle possible 
+de l'objet initial $\phi_0$.
+
+Par transformée de Fourier:
+  $$  %%%% 
+\hat{\psi}_i (u) = \hat{\phi}_0(u) \; \hat{h}(u) + \hat{b}(u)
+\eqno({\rm II.34})
+  $$
+
+La restauration du spectre de l'objet $\hat{\phi}(u)$ est donc
+problématique pour les fréquences $u$ pour lesquelles 
+$\hat{b} (u) / \hat{h}(u)$ est très grand devant 
+$\hat{\phi}_0 (u)$. Or tous les systèmes physiques présentent 
+une fréquence de coupure $u_c$ au-delà de laquelle la réponse est 
+nulle. La mesure du spectre de l'objet est donc impossible
+au-delà de $u_c$. De manière générale, on devra limiter la 
+résolution pour augmenter la fiabilité de l'objet reconstruit
+$\phi_r(x)$. Il existe donc un compromis entre fiabilité et résolution.
+Ce concept est traité de manière explicite dans la déconvolution régularisée 
+proposée par Lannes {\it et al.},~(1987), que nous allons brièvement 
+décrire dans les paragraphes suivants.
+              
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Espaces en jeu et opérateur d'imagerie $A$}
+
+Les observations conduisent à une image brute notée
+$\psi'_{i}$ appartenant à {\sl l'espace image} $F'_{i}$
+(cf.~Fig.~\ref{fig:decdiag}).
+Le but de la déconvolution est d'obtenir le maximum 
+d'information sur la fonction 
+objet $\phi_o$ appartenant à {\sl l'espace objet} noté $E_o$.
+
+Nous nous limiterons au cas où l'objet est défini
+sur un support borné de $\Rr^{p}$ 
+(dans le cas d'imagerie bidimensionnelle, $p\!=\!2$,
+en spectroscopie, $p\!=\!1$, cf.~\S IV.4). 
+L'espace objet $E_o$ est donc 
+$L^2(V_0)$, i.e., l'espace de Hilbert réel (cf.~Annexe~\Annexmath)
+des fonctions de carré sommable
+à valeurs dans $\Rr$ dont le support est $V_0$, 
+avec $ V_o \subset \Rr^p$.
+
+Lors de la réduction des données, pour atténuer 
+les imperfections du système 
+d'acquisition (par exemple correction de distorsion géométrique ou
+de défauts cosmétiques), cette image $\psi'_{i}$ est 
+transformée en une autre image $\psi_i$, par un opérateur $T$ 
+(généralement irréversible). L'espace image de $F'_i$ par $T$
+sera appelé {\sl espace image d'entrée} et noté $F_i$.
+
+On se limitera ici au cas où il existe une 
+relation objet-image de la forme:
+  $$  %%%% 
+\psi_s  = A \phi_s
+\eqno({\rm II.35})
+  $$
+où $A$ est une application linéaire continue 
+de $E$ dans $F_i$, que l'on appellera {\sl opérateur d'imagerie} 
+et on posera $F \! \equiv \! A E$. On cherchera donc la fonction 
+$\psi_r$ de $F$ qui soit le plus proche de~$\psi_i$, l'opérateur 
+correspondant sera noté $R$: 
+  $$  %%%% 
+\psi_r  = R \psi_i
+\eqno({\rm II.36})
+  $$
+Si le critère de proximité est la norme de $F_i$, alors $R$
+est l'opérateur de {\sl projection orthogonale de $F_i$ sur $F$}.
+
+Lorsque $A$ est bijectif de $E$ sur $F$, 
+l'objet reconstruit $\phi_r$ est défini par la relation:
+$\phi_r \! = \! A^{-1} \psi_r$.
+Si $A^{-1}$ n'est pas continu, le problème est 
+{\sl mal conditionné}, puisque une erreur de reconstruction image
+$(\psi_r - \psi_s)$ bornée ne se traduira pas forcément au terme 
+de la restauration par une erreur de reconstruction objet 
+$(\phi_r - \phi_s)$ également bornée.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Nécessité d'une limitation en résolution} 
+
+Soit $U$ l'opérateur de transformée de Fourier
+sur $L_{\Cc}^2(\Rr^p)$, l'espace de Hilbert des fonctions complexes définies
+sur $\Rr^p$ $L_{\Cc}^2(\Rr^p)$ et soit $U^*$ l'opérateur adjoint.
+En se référant aux ensembles et opérateurs
+définis dans le paragraphe précédent
+(\S II.3.b et Fig~\ref{fig:decdiag}), 
+la {\sl déconvolution avec extrapolation complète},
+i.e., sans limitation de résolution, est caractérisée par les 
+conditions suivantes:
+
+\smallskip
+\vbox{\parindent=0pt \vrule \hskip 1truemm \vrule \hskip1em 
+\vbox{%
+$E_0 \! = \! E \! = \! L^2(V_0)$,
+\hfil\break
+$ S \! = \! Id_E \qquad(\Rightarrow \phi_s \! = \! \phi_0 $ et $ V$  
+support de $\phi_s$ est égal à $ V_0$)
+\hfil\break
+$F_{i}^{'} \! = \! F_i \! = \! U^*L^2(H)$  où $H \subset \Rr^p$
+\hfil\break
+et $U^* L^2(H)$ est l'espace de Hilbert 
+réel des fonctions de carré sommable 
+\hfil\break
+à valeurs dans \Cc  dont la transformée de Fourier est à support sur $H$ 
+\hfil\break
+$ T \! = \! Id_{Fi} \;\;(\Rightarrow \psi_{i}^{'} \! = \!  \psi_i)$   
+$ A: E \mapsto F$ défini par $ A \phi \! = \! U^* h U 
+\phi $}}
+
+\bigskip
+Notons que $H$ peut être défini par exemple comme le domaine de 
+fréquences pour lesquelles la fonction de transfert du système d'imagerie
+n'est pas nulle. Comme nous l'avons déjà mentionné (cf~\S I.5),
+tout système physique admet une fréquence de coupure $u_c$ et donc 
+$H$ est un domaine borné.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\centerline{\epsfxsize=9cm\epsfbox{./figs/decdiag.eps}}
+\caption{
+Diagramme général du problème de la déconvolution.}
+\label{fig:decdiag}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Montrons maintenant que 
+la déconvolution avec extrapolation spectrale complète
+est un problème mal conditionné, i.e., que
+l'opérateur inverse $A^{-1}$ n'est pas continu.
+
+Pour démontrer que $A^{-1}$ n'est pas continu, montrons
+tout d'abord que $A$ est un opérateur de Hilbert-Schmidt (cf~Annexe~\Annexmath).
+Il en découlera ensuite que $A^{-1}$ n'est pas continu comme l'indique 
+la propriété suivante (cf.~Annexe~\Annexmath):
+
+{\sl
+Soit $A$ un opérateur de Hilbert-Schmidt d'un espace de Hilbert $E$ 
+sur un espace de Hilbert $F$.
+Quand $E$ est de dimension infinie et $A$ est injectif, alors 
+l'opérateur $A^{-1}$ de $F$ sur $E$ n'est pas continu (i.e, $A$ n'est 
+pas un isomorphisme topologique).
+}
+
+Pour montrer que $A$ est un opérateur de Hilbert-Schmidt, il suffit
+de montrer que la trace de $A^* A$ est bornée (cf.~Annexe~\Annexmath).
+
+Montrons tout d'abord que la trace de $A^* A$ est conservée par l'opérateur 
+de transformée de Fourier inverse:
+  $$  %%%% 
+A  = U^* A_o  \quad \Rightarrow \quad tr A^* A  = tr A_{o}^{*} A_o 
+\eqno({\rm II.37})
+  $$
+
+En effet:
+\begin{eqnarray}
+A^* A & = (U^* A_o)^* (U^* A_o) \cr
+& = A_{o}^* U U^* A_o \cr
+& = A_{o}^{*} A_o 
+\qquad (II.38)
+\end{eqnarray}
+
+On avait: $A \! = \! U^* h U$. Posons donc: $A_o \! = \! h U$.
+Pour toute fonction $\phi$ de $E$, on a:
+\begin{eqnarray}
+\left ( A_o \phi \right ) (u) 
+& = \int_{y \in \Rr^p} h(u) \times \phi (y) \times exp 
+\left \{ - 2 {\rm i} \pi u y \right \} \,\, dy \cr
+& = \int_{y \in {\Rr^p}} h(u) \times v(y) \times \phi (y) 
+\times exp \left \{ - 2 {\rm i} \pi u y \right \} \,\,dy 
+\quad (II.39)
+\end{eqnarray}
+
+Dans cette expression, nous avons fait apparaître
+$v(y)$ la fonction caractéristique du domaine $V$, puisque 
+$\phi$ est à support sur $V$.
+
+On reconnait la forme d'un {\sl opérateur intégral} 
+(cf.~Annexe~\Annexmath), i.e:
+  $$  %%%% 
+(A_o \phi ) (x) \equiv \int_V \Omega_o (x, y) \, \phi (y) \,dy
+\eqno({\rm II.40})
+  $$
+
+Par identification, on en déduit l'expression de la fonction 
+$\Omega_o$ (cf.~Annexe~\Annexmath):
+  $$ %%%%
+\Omega_o (u, y) = h(u) \times  v (y) \times exp \left \{ -2 {\rm i} \pi 
+u y \right \}  
+\eqno({\rm II.41})
+  $$
+
+D'après les résultats relatifs aux opérateurs intégraux
+de l'annexe~\Annexmath, la trace de $A_0^* A$ s'écrit:
+\begin{eqnarray}
+tr A_{o}^{*} A_o  & = 2 \times \int \!\!\int
+| h(u) \times  v(y) \times  exp \left ( -2 {\rm i} \pi u y  \right ) | ^2 
+\,\,dy \,du \cr
+ & = 2 \times \int\!\int | h(u)| ^2 \times 
+| v(y) |^2 \,\,dy \,du 
+\cr
+ & = 2 \times \int \mid h(u) \mid^2 \,du \times \int \,\,
+ \mid v(y) \mid ^2\,\, dy 
+\qquad (II.42)
+\end{eqnarray}
+
+Finalement d'après l'équation (II.38), on obtient l'expression de 
+la trace de l'opérateur $A^* A$:
+   $$
+tr A^* A  = 2 \times \int_H \mid h(u) \mid^2  du \times 
+\int_V \mid v(y) \mid ^2 \,\,dy 
+\qquad 2mm (II.43) 
+   $$
+
+Les supports $H$ et $V$ étant bornés, la trace de $A^* A$ est 
+donc bornée.
+L'opérateur $A$ est donc de Hilbert-Schmidt. D'après la propriété
+déjà mentionnée au début de cette section, 
+il en découle que $A^{-1}$ n'est pas continu.
+Le problème de déconvolution avec extrapolation complète dans le cas
+où $E \!= \!L^2(V_0)$ est de dimension infinie est donc mal conditionné.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\def\comment{%%%%%
+\bigskip
+\noindent
+{\sl Cas de dimension finie}
+
+\penalty 10000
+\medskip
+Le passage à la dimension finie, i.e., dans le cas où les supports
+$V_O$ et $H$  sont ``échantillonnés'' spatialement (et où donc
+l'espace $E \!= \!L^2(V_0)$ n'est plus de dimension infinie),
+régularise quelque peu le problème.
+Les méthodes itératives convergent mais avec un nombre 
+d'itérations très importants.
+En fait la stabilité du processus est quasiment impossible à 
+contrôler.
+}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Limitation de la résolution: fonction de lissage}
+ 
+Nous venons de voir que la déconvolution avec extrapolation
+spectrale complète conduisait à un problème mal
+conditionné. Il faut donc reformuler le problème en termes 
+d'extrapolation (ou interpolation) spectrale partielle dans une 
+certaine région spectrale $W$ de $\Rr^p$. Ceci revient en fait à 
+imposer une contrainte sur le comportement du spectre
+de l'objet restauré pour les hautes fréquences, i.e.,
+une {\sl limitation en résolution}.
+
+On est ainsi conduit à définir une version lissée $\phi_s$ de l'objet 
+d'origine $\phi_o$ à un degré de résolution plus faible, i.e, 
+$\phi_s$ sera plus pauvre en hautes fréquences spatiales que 
+$\phi_o$, et $ |\widehat \phi_s (u) |$ sera ``petit'' au sens des 
+moindres carrés en dehors d'une région bornée $H_r$ de l'espace 
+des fréquences. 
+On définira $H_r$ dans $\Rr^p$ comme la région "régularisant"
+de la meilleure façon possible le support $H$ de la fonction de 
+transfert. $H_r$ sera appelée {\sl ouverture synthétique}.
+
+L'objectif sera donc désormais la restitution d'une version
+limitée en résolution de l'objet initial $\phi_o$:
+  $$  %%%% 
+\phi_s  =  S \phi_o, 
+  $$
+où $S$ est un opérateur de lissage irréversible, de $E_o$ dans 
+l'espace $E$ de {\sl reconstruction objet}.
+$S$ est déterminé en fonction du système d'imagerie. 
+
+Lannes {\it et al.}, (1987) a défini 
+cet opérateur de la façon suivante:
+
+$S$ est un opérateur de convolution par une fonction $s$
+(i.e., $ S \! = \! U^* s U$):
+  $$ %%%%%
+\phi_s  =  s * \phi_o 
+\eqno({\rm II.44})
+  $$ 
+
+La {\sl fonction de lissage} $ \widehat s (u)$ est paire et à valeurs réelles, 
+et satisfait aux trois propriétés suivantes:
+
+$\bullet$ l'énergie de $ \widehat s$ est concentrée dans $H_r$, i.e, 
+$ \mid \widehat s (u) \mid $ est petit 
+au sens des moindres carrés en dehors de $H_r$.
+Posons :
+  $$ %%%% 
+\chi^2 ={ 1 \over \parallel \widehat s \parallel ^2} 
+\int_{H_r} \mid \widehat s(u) \mid ^2 \, du 
+\eqno({\rm II.45})
+  $$
+où $\chi^2$ représente la fraction d'énergie 
+de $\widehat s$ dans $H_r$.
+On imposera comme condition que 
+$\chi^2$ soit proche de~1. 
+
+$\bullet$ $\widehat s (u)$ est normalisée conformément à la relation 
+$s(0) \! = \! \int \widehat s(u) \,du \! = \! 1$
+ce qui implique
+$ \int  \widehat \phi_s (u)\,du \! = \! \int \widehat \phi_o (u)\,du $,
+soit encore (par l'application du théorème de Parseval)
+$ \int \phi_s (x)\,dx \! = \! \int \phi_o (x)\,dx $
+(conservation de la photométrie).
+
+$\bullet$ Le support $D_r$ (dans l'espace direct) de $s$ est aussi 
+petit que possible, i.e, la résolution de $\phi_s$ doit être la 
+meilleure possible. La taille du support $D_r$ de $s$ est ajustée
+en fonction de la résolution que l'on souhaite obtenir pour $\phi_s$.
+
+\bigskip
+On peut maintenant définir plus précisément l'espace $E$ de 
+reconstruction objet: il s'agit de $L^2 (V)$ où $ V \! = \! V_o + D_r$
+($V_o$ agrandi par la fonction d'étalement $s$ dont le support 
+est $D_r$).
+En effet le support de $\phi_s$ est contenu dans la ``somme des 
+supports'' de $\phi_o$ et de $s$ (voir Fig.~\ref{fig:decregul}).
+
+Lannes {\it el al}., 1987, ont montré qu'un choix judicieux des
+supports $D_r$ et $H_r$ de cet opérateur $S$ régularisait le problème
+de la déconvolution tout en autorisant une certaine extrapolation
+ou interpolation dans le domaine de Fourier, i.e., un gain 
+en résolution. Nous reviendrons en \S II.3.f sur le critère
+quantitatif introduit par ces auteurs.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{ Interpolation des ``trous fréquentiels''}
+
+La mesure $\hat{\phi}(u)$ du spectre de l'image
+fournie par un système d'imagerie
+n'est généralement pas de qualité uniforme sur toutes les fréquences.
+Le rapport signal sur bruit (SNR) est souvent meilleur pour les 
+basses fréquences, diminue vers les hautes fréquences, puis
+s'annule au-delà de la fréquence de coupure du système d'imagerie.
+On peut donc imposer un seuil $\alpha_t$ en deçà duquel le 
+rapport SNR est trop faible pour que les données
+soient considérées comme fiables. 
+Dans les zones concernées,
+appelées {\sl trous fréquentiels}, on peut soit rejeter en bloc 
+les données et les considérer comme nulles, soit procéder à 
+une interpolation, en utilisant au besoin des contraintes
+sur l'objet à reconstruire.
+
+Dans le premier cas, on obtient une approximation grossière 
+$\hat{\Phi}_t(u)$ du spectre de l'objet en divisant 
+par la fonction de transfert
+le spectre de l'image, tronqué par 
+$\hat{s}(u)$ sur le domaine $H_r$, là où le rapport SNR est 
+supérieur à $\alpha_t$:
+  $$  %%%% 
+\hat{\Phi}_t (u) = 
+\hat{s}_t(u) \hat{\psi}_i (u)
+ \qquad {\rm avec} \quad
+\hat{s}_t(u) = 
+\left\{ \!\!
+\matrix{
+  & \hat{s}(u) / \hat{h}(u) 
+  & {\rm si} \quad SNR(u) \geq \alpha_t ;\cr
+  & 0 
+  & {\rm sinon.} \cr
+        }
+\right.
+\eqno({\rm II.46})
+  $$
+
+Dans le second cas, l'interpolation peut se faire tout
+simplement en minimisant la fonctionnelle:
+  $$  %%%% 
+q(\phi) = \| \, g \left( \hat{\Phi}_t - \hat{\phi} \right) 
+\|^2
+\eqno({\rm II.47})
+  $$
+sur l'espace $E$ de reconstruction objet.
+La fonction poids $g(u)$ est définie 
+de façon à ne pas tenir compte des données de mauvaise qualité:
+  $$  %%%% 
+g(u) = 
+\left\{
+\matrix{
+  & 1  & {\rm si} \quad SNR(u) \geq \alpha_t ;\cr
+  & 0  & {\rm sinon.} \cr
+        }
+\right.
+\eqno({\rm II.48})
+  $$
+
+{\sl L'interpolation dans le domaine de Fourier n'est donc pas 
+explicite.} La solution sera définie par la
+fonction appartenant à $E$ dont le spectre minimise la distance 
+avec $\hat{\Phi}_t$, en tenant compte des poids $g(u)$.
+La fonction $w(u) = 1 - g^2(u)$ est donc
+caractéristique du domaine d'interpolation $W$ dans l'espace de 
+Fourier. 
+
+Notons de plus que $g(u)$ vaut 1 en dehors de $H_r$, car il ne
+doit pas y avoir d'interpolation; on doit s'efforcer d'avoir des valeurs 
+nulles pour le spectre de la fonction solution en dehors de 
+$H_r$. On peut aussi choisir une fonction $g$ qui ne soit pas 
+binaire, et qui affecte un poids proportionnel au rapport SNR 
+lorsque celui-ci est supérieur à $\alpha_t$.
+
+\bigskip
+Rappelons que $U$ et $U^{*}$ sont respectivement les opérateurs 
+de transformée de Fourier, et l'opérateur inverse.
+Reprenons l'expression II.47, en y substituant
+$\hat{\phi} = U \phi $ et $\hat{\Phi}_t = \hat{s}_t U \psi_i$. 
+La fonctionnelle à minimiser s'écrit alors:
+  $$  %%%% 
+q(\phi) = \| g \left( \hat{s}_t U \psi_i - U \phi \right) \|^2
+\eqno({\rm II.49})
+  $$
+
+\smallskip
+En utilisant le théorème de Parseval (conservation du produit 
+scalaire par la transformée de Fourier):
+  $$  %%%% 
+q(\phi) = \| U^{*} g \left( \hat{s}_t U \psi_i - U \phi \right) \|^2
+\eqno({\rm II.50})
+  $$
+
+\smallskip
+On reconnait alors un problème-type des moindres carrés 
+(Cf.~annexe~\Annexmcarres): 
+  $$  %%%% 
+q(\phi) = \| \psi_i - A \phi \|^2 
+\quad \hbox{avec} \quad
+\Psi_i =  U^{*} g \hat{s}_t U \psi_i
+\quad \hbox{et} \quad
+A \phi =  U^{*} g U \phi
+\eqno({\rm II.51})
+  $$
+
+La fonction recherchée $\Phi$ est donc solution de l'équation normale
+$A^{*}A \phi = A^{*} \psi_i$.
+
+Déterminons maintenant l'opérateur adjoint $A^{*}$. Soit $F=AE$
+l'espace image des fonctions de $E$. Pour tout $\psi$ de $F$, on 
+a: 
+  $$  %%%% 
+(A \phi | \psi)_F = (\phi | A^{*} \psi)_E 
+\eqno({\rm II.52})
+  $$
+Donc:
+  $$  %%%% 
+(A \phi | \psi)_F = 
+(U^{*} g U \phi | \psi)_F 
+=(\phi | v U^{*} g U \psi)_E 
+\eqno({\rm II.53})
+  $$
+
+Nous avons introduit ici $v(x)$, la fonction caractéristique du support 
+$V$ de l'objet, car nous imposons une contrainte de support dans 
+l'espace direct.  On en déduit:
+  $$  %%%% 
+A^{*} = v U^{*} g U 
+\qquad {\rm et}
+\qquad
+A^{*}A = v U^{*} g^2 U 
+\eqno({\rm II.54})
+  $$
+
+L'équation normale du problème de déconvolution avec interpolation
+partielle s'écrit donc:
+  $$
+v U^{*} g^2 U \phi = v U^{*} g U \psi_i
+\qquad (II.55)
+  $$
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\centerline{\epsfxsize=9cm\epsfbox{./figs/decregul.eps}}
+\caption{
+Illustration unidimensionnelle du principe de régularisation: on introduit
+une fonction de lissage $\widehat s$ ``confinée'' sur $H_r$ qui peut
+dans certains cas être plus étendu que 
+le support $H$ de la fonction de transfert du système d'imagerie
+(extrapolation partielle).}
+\label{fig:decregul}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{ Stabilité de la déconvolution}
+
+Examinons maintenant les conditions de stabilité, qui vont être
+déterminées par les valeurs propres de la matrice $A^{*}A$ 
+(cf.~annexe~\Annexmcarres).
+
+En utilisant la fonction  $w = 1 - g^2$, il vient:
+  $$  %%%% 
+A^{*}A \phi = v U^{*} (1 - w) U \phi = v \phi - v U^{*} w U \phi
+\eqno({\rm II.56})
+  $$
+
+En tenant compte des contraintes de support: $v \phi = \phi $.
+Donc:
+  $$  %%%% 
+A^{*}A = I - B
+\qquad {\rm avec}
+\quad
+B = v U^{*} w U 
+\eqno({\rm II.57})
+  $$
+
+L'opérateur $B$ est caractérisé par deux troncatures successives:
+sur $W$ dans l'espace de Fourier, puis sur $V$ dans l'espace 
+direct. On montre alors que la stabilité du processus de 
+reconstruction est liée au paramètre $\eta= \tau \nu$,  
+où $\tau^2$ et $\nu^2$ sont les surfaces respectivement de $V$ et $W$:
+$\tau^2 = \int_{V} dx$
+et $\nu^2 = \int_{W} du$.
+Ce paramètre $\eta$ caractérise la quantité d'interpolation qui 
+est effectuée à la fois dans l'espace réel et dans l'espace de 
+Fourier.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\def\comment{%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Le paramètre-clé est alors le {\sl paramètre d'interpolation}
+$\eta$ qui est le produit des racines carrées des ``aires'' de $H_r$ et $D_r$:
+
+  $$ %%%%%
+\eta = 
+\left( \int_{H_r} \, du \right)^{1/2} 
+\times \left( \int_{D_r} \, dx \right)^{1/2}
+\eqno({\rm II.58})
+  $$ 
+ 
+Ce paramètre permet ainsi de quantifier la ``régularisation du problème,''
+en limitant la résolution de la fonction objectif à restaurer
+(dépendant de l'ouverture synthétique $H_r$ et 
+de l'ellipsoïde de résolution $D_r$)
+}%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+{\sl Conclusion:} La stabilité du processus de déconvolution 
+dépend du nombre de conditionnement de l'opérateur $A^{*}A$.
+Si le problème est mal conditionné, on doit réduire la taille de 
+$V$ ou celle de $W$, 
+ce qui dans ce dernier cas limite la résolution que l'on peut 
+atteindre. Pour éviter des calculs inutiles, il est judicieux de
+calculer tout d'abord la valeur de $\eta$, qui est étroitement lié au
+nombre de conditionnement. Lorsque ce nombre prend des valeurs 
+raisonnables (inférieur à quelques unités), on peut engager le 
+processus complet de minimisation par moindres carrés. 
+
+\bigskip
+\noindent
+{\sl Conditions de stabilité de reconstruction}
+
+\penalty 10000
+\medskip
+On supposera que le spectre de $A^* A$ admet un et un seul point 
+d'accumulation $\mu''$ et que de plus $\mu'' \not \! = \! 0$.
+Autrement dit, $A^* A$ étant positif, ceci signifie que:
+
+-- La plus petite valeur propre $\mu$ de $A^* A$ est strictement 
+positive:
+  $$ %%%%  
+\displaystyle \mu = \min_{\parallel \Phi \parallel = 1} 
+{\parallel A \Phi \parallel ^2  > 0} 
+\eqno({\rm II.59})
+  $$
+-- La suite des valeurs propres $(\mu_j)_{j \geq 1}$ est telle 
+que:
+  $$ %%%% 
+\displaystyle \lim_{j \rightarrow \infty } {\mu_j} = \mu'' 
+\eqno({\rm II.60})
+  $$
+
+La première condition signifie que $F$ est fermé car $A$ est un 
+isomorphisme de $E$ dans $F$ avec 
+$ \parallel A^{- 1} \parallel \! = \! 1 / \sqrt \mu$.
+La connaissance de $\mu$ permet d'estimer  la fiabilité du 
+processus de reconstruction considéré. 
+  $$ %%%%
+{ \parallel \delta \Phi \parallel \over \parallel \Phi 
+\parallel } \leq  \sqrt{{\mu' \over \mu}} { \parallel \delta \Psi 
+\parallel \over \parallel \Psi \parallel }
+\eqno({\rm II.61})
+  $$
+où $ \displaystyle \mu' \! = \! sup_{\parallel \Phi \parallel \! = \! 1 } 
+{\parallel A \Phi  \parallel ^2} \! =  \parallel A \parallel ^2 $
+et $ C_a \! = \! \sqrt {\mu' / \mu''} $  est le nombre de 
+conditionnement.
+Le processus de reconstruction sera d'autant plus fiable que 
+$C_a$ sera plus proche de~1. De plus, on voit que la condition 
+$\mu \! \not = \! 0$ asssure l'existence de $C_a$.
+
+Pour l'interprétation de la deuxième condition, on considère 
+l'équation  aux valeurs propres $ A^* A \Phi \! = \! M \Phi$,
+le paramètre $M$ prend toutes les valeurs de la suite 
+$(\mu_j)_{j \geq 1}$, or si $\mu''$ est point d'accumulation du 
+spectre de $A^* A$, cela signifie que $M$ prendra un très grand 
+nombre de fois une valeur proche de~$\mu''$. On peut alors 
+remplacer l'équation précédente par: $ \mu'' \Phi - A^* A $ est 
+très petit. Ce qui signifie que  l'opérateur $ B \! = \! \mu'' I - A^* 
+A$ ne provoque qu'une petite perturbation des fonctions sur 
+lesquelles il opère.
+Pour que le problème soit bien conditionné, il faut que $A^* A$ 
+soit une petite perturbation de l'identité et donc qu'il ait une 
+action relativement faible sur les fonctions sur lesquelles il va 
+opérer.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{ Estimation des erreurs}
+
+Par rapport à la plupart des autres méthodes de déconvolution,
+cette minimisation par moindres carrés présente l'avantage
+de pouvoir estimer les erreurs de reconstruction. 
+
+Il est bon de vérifier que le vecteur propre associé à la 
+plus petite des valeurs propres $\mu$ de $A^{*} A$ ne domine pas la 
+solution, ce qui indiquerait que les structures qui lui sont 
+associées sont des artefacts.
+
+Comme dans tout
+processus de minimisation par moindres carrés (Cf. \S II.1), 
+la solution $\Phi$ de l'équation normale
+est la projection orthogonale de $\Psi_i$ sur $F=AE$.
+Les erreurs de reconstruction sont définies par 
+$\Delta \Phi = \| \Phi - \phi_s \| $  et 
+$\Delta \Psi = \| \Psi - \Psi_s \|$
+dans les espaces objet et image respectivement
+(avec $A \phi_s = \Psi_s$). On a donc:
+  $$  %%%% 
+\| \Psi_i - \Psi_s \|^2 
+= \| \Psi_i - \Psi \|^2 + \| \Psi - \Psi_s \|^2
+= \| \Psi_i - \Psi \|^2 + \| \Delta \Psi \|^2
+\eqno({\rm II.62})
+  $$
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\centerline{\epsfxsize=9cm\epsfbox{./figs/decerror.eps}}
+\caption{
+Principe de l'estimation des erreurs.}
+\label{fig:decerror}
+\end{figure}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Un majorant $\epsilon$ de la distance $\| \Psi_i - \Psi_s \|$, entre la
+fonction image mesurée $\Psi_i$ et 
+l'image théorique $\Psi_s$ de l'objet lissé $\phi_s$ par l'opérateur 
+imageur $A$, peut être calculé par une estimation des erreurs
+d'entrée (par le rapport SNR). On en déduit:
+$\| \Delta \Psi \| \leq \epsilon$
+
+Or $\Delta \Phi = A^{-1} \Delta \Psi$, donc:
+  $$  %%%% 
+\| \Delta \Phi \| 
+\leq \| A^{-1} \| \; \|\Delta \Psi \|
+= { 1 \over \sqrt{\mu_{min}} } \; \|\Delta \Psi \|
+\eqno({\rm II.63})
+  $$
+où $\mu_{min}$ est la plus petite des valeurs propres de 
+$A^{*} A$ (et $\sqrt{\mu_{min}}$ est alors la plus petite des 
+valeurs singulières de l'opérateur $A$). 
+On en déduit:
+  $$  %%%% 
+\| \Delta \Phi \| 
+\leq 
+{ \epsilon \over \sqrt{\mu_{min}} } 
+\eqno({\rm II.64})
+  $$
+
+On peut bien sûr faire une analyse plus fine des erreurs avec 
+une décomposition complète en valeurs propres de l'opérateur
+$A^{*}A$ pour déterminer si les erreurs sont bien réparties sur 
+tout le spectre des vecteurs propres.
+Il peut être utile de vérifier que le vecteur propre associé à la 
+plus petite des valeurs propres $\mu_{min}$ de $A^{*} A$ ne domine pas la 
+solution, ce qui indiquerait que les structures qui lui sont 
+associées sont des artefacts.
+ 

@@ -1,0 +1,227 @@
+!****************************************************************** 
+! Test program in Fortran 90
+! To emulate Herve Carfantan's simulation 
+!  spdiv => Direct spectral division
+!  wiene => Wiener filter 
+!  tikho => Tikhonov regularisation
+!  maxen => Maximum Entropy method
+!
+! JLP
+! Version 23/03/2001
+!****************************************************************** 
+program dcv_deconv_1D
+ use dcv_1D_data
+ use dcv_1D_mod
+ implicit none
+ integer			:: n_simu=1
+ logical,parameter		:: display_all=.false.
+ real				:: rms_err,ss
+ integer			:: iter,pntr,nx,ny
+ character(len=20)		:: extension
+ character(len=40)		:: title 
+ character(len=60)		:: filename
+ character(len=80)		:: comments
+
+call jlp_begin
+call jlp_inquifmt
+
+print *,' Program to deconvolve 1D signals'
+print *,' JLP version 23/03/2001'
+
+print *,' Number of simulation (1 or 2): '
+read(5,*) n_simu
+if(n_simu==1)then
+  extension='simu1D'
+  nn1 = 256
+! Length of the support of hh is hh_nx=5 (for this simulation)
+  hh_nx = 5
+else
+  extension='simu2D'
+  nn1 = 512 
+! Length of the support of hh is hh_nx=32 (for this simulation)
+  hh_nx = 32 
+endif
+
+! Read it first to determine the size:
+filename=trim(extension)//'_yy0'
+call jlp_vm_readimag(pntr,nx,ny,filename,comments);
+if(ny /= 1 .or. nx > idim)then 
+   print *,' Fatal error: nx=',nx,' ny=',ny; stop;
+endif
+nn = nx;
+! To prepare FFT's:
+print *,' fft_setup with (',nn1,',1)'
+call fft_setup(nn1,1)
+
+! Then allocate memory space:
+allocate(yy0(idim)); allocate(yy(idim)); allocate(hh(idim));
+allocate(yyd(idim)); allocate(w0(idim)); allocate(w1(idim)); 
+allocate(w_re(idim)); allocate(w_im(idim));
+allocate(hh_re(idim)); allocate(hh_im(idim));
+allocate(hht_re(idim)); allocate(hht_im(idim));
+allocate(yy_re(idim)); allocate(yy_im(idim));
+
+! Read input files:
+!----------------------
+! Original signal:
+filename=trim(extension)//'_yy0'
+call jlp_readimag(yy0,nx,ny,idim,filename,comments);
+yy0(nn+1:idim)=0.;
+!----------------------
+! Signal to deconvolve:
+filename=trim(extension)//'_yyb'
+call jlp_readimag(yy,nx,ny,idim,filename,comments);
+if(ny /= 1 .or. nx /= nn)then 
+   print *,' Fatal error: nx=',nx,' ny=',ny; stop;
+endif
+yy(nn+1:idim)=0.;
+!----------------------
+! PSF:
+filename=trim(extension)//'_psf'
+call jlp_readimag(hh,nx,ny,idim,filename,comments);
+if(ny /= 1 .or. nx /= nn)then 
+   print *,' Fatal error: nx=',nx,' ny=',ny; stop;
+endif
+hh(nn+1:idim)=0.;
+
+! Set to zero all arrays:
+w0 = 0.; w1 = 0.; 
+
+!--------------------------------
+! Check if input is OK:
+if(display_all)then
+  call dcv_display_input
+endif
+
+!--------------------------------
+! Deconvolution
+!--------------------------------
+
+write(6,18); 
+18 format(/,&
+' ==================== Options: ================',/,&
+' - spdiv: spectral division',/,&
+' - wiene: Wiener filter',/,&
+' Regularisation on x_i only ',/,&
+' - tikho: Tikhonov''s regularisation',/,&
+' - ggaus: Generalized Gauss''s regularisation (p=1.1)',/,&
+' - maxen: regularisation with maximum entropy',/,&
+' - sqrtr: convex sqrt(s2+x2) regularisation',/,&
+' Regularisation on x_i+1 - x_i ',/,&
+' - gmark: Gauss-Markov''s regularisation (p=2)',/,&
+' ======== Enter the option you want: ===========')
+read(5,*) option
+print *,' OK: option=',option
+
+select case(option)
+
+!--------------------------------
+! Deconvolution by spectral division:
+case('spdiv')
+   call dcv_spdiv
+   yyd(nn+1:idim) = 0.; yy0(nn+1:idim) = 0.;
+   rms_err=sqrt(sum((yyd-yy0)**2))/float(nn)
+   print *,'rms error=',rms_err
+   write(6,*) "Display signal deconvolved by spectral division:"
+   write(title,10) rms_err
+10 format('Spectral division:  rms=',f6.4)
+   call dcv_plot2(yyd,yy0,nn,title)
+
+!--------------------------------
+! Deconvolution by Wiener filter:
+case('wiene')
+   alpha=1.
+   call dcv_wiener
+   yyd(nn+1:idim) = 0.; yy0(nn+1:idim) = 0.;
+   rms_err=sqrt(sum((yyd-yy0)**2))/float(nn)
+   print *,'rms error=',rms_err
+   write(6,*) "Display Wiener deconvolved signal:"
+   write(title,11) alpha,rms_err
+11 format('Wiener: alpha=',F4.1,' rms=',f6.4)
+   if(n_simu==1)then
+     call dcv_plot2(yyd,yy0,nn,title)
+   else
+! Bad visibility for the simulation #2, 
+! so only the deconvolved signal is displayed
+     call dcv_plot1(yyd,nn,title)
+   endif
+
+!--------------------------------
+! Deconvolution with Tikhonov's regularisation 
+! Generalized Gauss with p=2
+case('tikho')
+   print *,' Enter alpha value: '; read(5,*)alpha
+   call dcv_tikhonov(iter)
+   yyd(nn+1:idim) = 0.; yy0(nn+1:idim) = 0.;
+   rms_err=sqrt(sum((yyd-yy0)**2))/float(nn)
+   print *,'rms error=',rms_err
+   write(6,*) "Display Tikhonov deconvolved signal:"
+   write(title,12) alpha,rms_err,iter
+12 format('Tikhonov: alpha=',F4.1,' rms=',f6.4,' iter=',I3)
+   call dcv_plot2(yyd,yy0,nn,title)
+
+!--------------------------------
+! Deconvolution with generalized Gauss' regularisation 
+! with p=1.1
+case('ggaus')
+   print *,' Enter alpha value: '; read(5,*)alpha
+   call dcv_ggauss(iter)
+   yyd(nn+1:idim) = 0.; yy0(nn+1:idim) = 0.;
+   rms_err=sqrt(sum((yyd-yy0)**2))/float(nn)
+   print *,'rms error=',rms_err
+   write(6,*) "Display generalized Gauss deconvolved signal:"
+   write(title,13) alpha,rms_err,iter
+13 format('Gen. Gauss: alpha=',F4.1,' rms=',f6.4,' it=',I3)
+   call dcv_plot2(yyd,yy0,nn,title)
+
+!--------------------------------
+! Deconvolution with convex sqrt(s2+x2) regularisation 
+case('sqrtr')
+   print *,' Enter alpha and s: (0.1,0.001) '; read(5,*)alpha,ss
+   call dcv_sqrtrf(ss,iter)
+   yyd(nn+1:idim) = 0.; yy0(nn+1:idim) = 0.;
+   rms_err=sqrt(sum((yyd-yy0)**2))/float(nn)
+   print *,'rms error=',rms_err
+   write(6,*) "Display convex sqrt regul. deconvolved signal:"
+   write(title,14) ss,alpha,rms_err,iter
+14 format('sqrt: s=',F4.3,'alpha=',F4.1,' rms=',f6.4,' it=',I3)
+   call dcv_plot2(yyd,yy0,nn,title)
+
+!--------------------------------
+! Deconvolution with Maximum Entropy method 
+case('maxen')
+   print *,' Enter alpha value: '; read(5,*)alpha
+   call dcv_mem(iter)
+   yyd(nn+1:idim) = 0.; yy0(nn+1:idim) = 0.;
+   rms_err=sqrt(sum((yyd-yy0)**2))/float(nn)
+   print *,'rms error=',rms_err
+   write(6,*) "Display MEM deconvolved signal:"
+   write(title,15) alpha,rms_err,iter
+15 format('MEM: alpha=',F4.1,' rms=',f6.4,' iter=',I3)
+   call dcv_plot2(yyd,yy0,nn,title)
+
+!--------------------------------
+! Deconvolution with Gauss Markov regularisation (on x_i+1 - x_i) 
+case('gmark')
+   print *,' Enter alpha: '; read(5,*)alpha
+   call dcv_gmark(iter)
+   yyd(nn+1:idim) = 0.; yy0(nn+1:idim) = 0.;
+   rms_err=sqrt(sum((yyd-yy0)**2))/float(nn)
+   print *,'rms error=',rms_err
+   write(6,*) "Display Gauss-Markov deconvolved signal:"
+   write(title,16) alpha,rms_err,iter
+16 format('Gauss-Markov alpha=',F4.1,' rms=',f5.3,' it=',I3)
+   call dcv_plot2(yyd,yy0,nn,title)
+
+!---------------------------------
+! Test with Banana function:
+case('banan')
+   call dcv_banana
+case default
+   print *,' Fatal: invalid option'
+   stop
+end select
+
+call jlp_end
+
+end program dcv_deconv_1D 

@@ -1,0 +1,321 @@
+!*********************************************************
+! Flechter-Reeves-Polak-Ribiere minimization
+! Cf "Numerical recipees" Sect. 10.6 (in C p 423, in F77 p 416)
+! IN:
+! p: first guess
+! n = dimension of p
+! ftol = tolerance
+! OUT:
+! p: location of minimum
+! iter: nber of iterations
+! fret: value of minimum 
+!
+! Given a starting point p that is a vector of length n
+! Flechter-Reeves-Polak-Ribiere minimization is performed on
+! a function func, using its gradient as calculated by a routine dfunc.
+! The convergence tolerance on the function value is input as ftol.
+! Return quantities are p (the location of the minimum),
+! iter (the number of iterations that were performed) 
+! and fret (the minimum value of the function).
+! The routine linmin is called to perform line minimizations. 
+!********************************************************
+      subroutine frprmn(p,n,ftol,iter,fret)
+! itmax: maximum allowed number of iterations
+! eps: small number to rectify the special case
+! of converging toexactly zero function value
+      implicit none
+      integer nmax,itmax,j,iter,n
+      real gam,gg,dgg,fret,ftol,eps,fp,norm_p,norm_p0
+      real crit_fp,crit_p
+      parameter (nmax=256,itmax=1000,eps=1.e-10)
+      real p(n),g(nmax),h(nmax),xi(nmax),p0(nmax)
+      real func,norm_l2
+      external func,norm_l2
+! Initializations:
+      fp=func(p)
+      call dfunc(p,xi)
+      do 11 j=1,n
+        g(j)=-xi(j)
+        h(j)=g(j)
+        xi(j)=h(j)
+11    continue
+      do 14 iter=1,itmax
+        do j=1,n
+          p0(j) = p(j)
+        end do
+        call linmin(p,xi,n,fret)
+        do j=1,n
+          p0(j) = p0(j) - p(j)
+        end do
+        norm_p0 = norm_l2(p0,n)
+        norm_p = norm_l2(p,n)
+        crit_p = norm_p0 / (norm_p+eps)
+        crit_fp = 2.*abs(fret-fp)/(abs(fret)+abs(fp)+eps)
+        if(mod(iter,10).eq.1)then
+          write(6,18) iter,crit_p,crit_fp 
+18	  format('Iter=',I3,' Rel. variation p=',e10.3,' fp=',e10.3)
+        endif
+! Next statement is normal return:
+! Exit criterium is 2 * |fret-fp| < ftol * (|fret| + |fp| + eps)
+! i.e. relative variation of fp is small:
+! 2 * |fret-fp| / (|fret| + |fp| + eps) < ftol
+!  which is nearly: |fret-fp| / |fret| < ftol
+!        if(2.*abs(fret-fp).le.ftol*(abs(fret)+abs(fp)+eps))return
+! JLP 2001
+! I also put a constraint on the variations of p
+        if((crit_fp.le.ftol).and.(crit_p.le.ftol)) return
+        fp=func(p)
+        call dfunc(p,xi)
+        gg=0.
+        dgg=0.
+        do 12 j=1,n
+          gg=gg+g(j)**2
+c Flechter-Reeves:
+c         dgg=dgg+xi(j)**2
+c Polak-Ribiere: (better)
+          dgg=dgg+(xi(j)+g(j))*xi(j)
+12      continue
+! Unlikely: if gradient is exactly zero, then we are already done.
+        if(gg.eq.0.)then
+            write(6,*)'frprmn/return since gradient is null: gg=0'
+            return
+        endif
+        gam=dgg/gg
+        do 13 j=1,n
+          g(j)=-xi(j)
+          h(j)=g(j)+gam*h(j)
+          xi(j)=h(j)
+13      continue
+14    continue
+      write(6,*) 'frprmn/maximum iterations exceeded: iter=',iter
+      return
+      end
+!************************************************************
+! Norm L2
+!************************************************************
+      real function norm_l2(p,n)
+      integer n,j
+      real p(n)
+      norm_l2 = 0.
+      do j=1,n
+        norm_l2 = norm_l2 + p(j)*p(j)
+      end do
+      return
+      end
+!************************************************************
+! Search for minimum along a given direction
+!************************************************************
+      subroutine linmin(p,xi,n,fret)
+      parameter (nmax=256,tol=1.e-4)
+      external f1dim,df1dim
+      dimension p(n),xi(n)
+      common /f1com/ ncom,pcom(nmax),xicom(nmax)
+      ncom=n
+      do 11 j=1,n
+        pcom(j)=p(j)
+        xicom(j)=xi(j)
+11    continue
+      ax=0.
+      xx=1.
+      bx=2.
+      call mnbrak(ax,xx,bx,fa,fx,fb,f1dim)
+      fret=dbrent(ax,xx,bx,f1dim,df1dim,tol,xmin)
+      do 12 j=1,n
+        xi(j)=xmin*xi(j)
+        p(j)=p(j)+xi(j)
+12    continue
+      return
+      end
+!**************************************************************
+      function df1dim(x)
+      parameter (nmax=256)
+      common /f1com/ ncom,pcom(nmax),xicom(nmax)
+      dimension xt(nmax),df(nmax)
+      do 11 j=1,ncom
+        xt(j)=pcom(j)+x*xicom(j)
+11    continue
+      call dfunc(xt,df)
+      df1dim=0.
+      do 12 j=1,ncom
+        df1dim=df1dim+df(j)*xicom(j)
+12    continue
+      return
+      end
+!**************************************************************
+      function f1dim(x)
+      parameter (nmax=256)
+      common /f1com/ ncom,pcom(nmax),xicom(nmax)
+      dimension xt(nmax)
+      do 11 j=1,ncom
+        xt(j)=pcom(j)+x*xicom(j)
+11    continue
+      f1dim=func(xt)
+      return
+      end
+!**************************************************************
+      subroutine mnbrak(ax,bx,cx,fa,fb,fc,func)
+      parameter (gold=1.618034, glimit=100., tiny=1.e-20)
+      fa=func(ax)
+      fb=func(bx)
+      if(fb.gt.fa)then
+        dum=ax
+        ax=bx
+        bx=dum
+        dum=fb
+        fb=fa
+        fa=dum
+      endif
+      cx=bx+gold*(bx-ax)
+      fc=func(cx)
+1     if(fb.ge.fc)then
+        r=(bx-ax)*(fb-fc)
+        q=(bx-cx)*(fb-fa)
+        u=bx-((bx-cx)*q-(bx-ax)*r)/(2.*sign(max(abs(q-r),tiny),q-r))
+        ulim=bx+glimit*(cx-bx)
+        if((bx-u)*(u-cx).gt.0.)then
+          fu=func(u)
+          if(fu.lt.fc)then
+            ax=bx
+            fa=fb
+            bx=u
+            fb=fu
+            go to 1
+          else if(fu.gt.fb)then
+            cx=u
+            fc=fu
+            go to 1
+          endif
+          u=cx+gold*(cx-bx)
+          fu=func(u)
+        else if((cx-u)*(u-ulim).gt.0.)then
+          fu=func(u)
+          if(fu.lt.fc)then
+            bx=cx
+            cx=u
+            u=cx+gold*(cx-bx)
+            fb=fc
+            fc=fu
+            fu=func(u)
+          endif
+        else if((u-ulim)*(ulim-cx).ge.0.)then
+          u=ulim
+          fu=func(u)
+        else
+          u=cx+gold*(cx-bx)
+          fu=func(u)
+        endif
+        ax=bx
+        bx=cx
+        cx=u
+        fa=fb
+        fb=fc
+        fc=fu
+        go to 1
+      endif
+      return
+      end
+!**************************************************************
+      function dbrent(ax,bx,cx,ff,dff,tol,xmin)
+      parameter (itmax=100,zeps=1.0e-10)
+      logical ok1,ok2
+      a=min(ax,cx)
+      b=max(ax,cx)
+      v=bx
+      w=v
+      x=v
+      e=0.
+      fx=ff(x)
+      fv=fx
+      fw=fx
+      dx=dff(x)
+      dv=dx
+      dw=dx
+      do 11 iter=1,itmax
+        xm=0.5*(a+b)
+        tol1=tol*abs(x)+zeps
+        tol2=2.*tol1
+        if(abs(x-xm).le.(tol2-.5*(b-a))) goto 3
+        if(abs(e).gt.tol1) then
+          d1=2.*(b-a)
+          d2=d1
+          if(dw.ne.dx) d1=(w-x)*dx/(dx-dw)
+          if(dv.ne.dx) d2=(v-x)*dx/(dx-dv)
+          u1=x+d1
+          u2=x+d2
+          ok1=((a-u1)*(u1-b).gt.0.).and.(dx*d1.le.0.)
+          ok2=((a-u2)*(u2-b).gt.0.).and.(dx*d2.le.0.)
+          olde=e
+          e=d
+          if(.not.(ok1.or.ok2))then
+            go to 1
+          else if (ok1.and.ok2)then
+            if(abs(d1).lt.abs(d2))then
+              d=d1
+            else
+              d=d2
+            endif
+          else if (ok1)then
+            d=d1
+          else
+            d=d2
+          endif
+          if(abs(d).gt.abs(0.5*olde))go to 1
+          u=x+d
+          if(u-a.lt.tol2 .or. b-u.lt.tol2) d=sign(tol1,xm-x)
+          goto 2
+        endif
+1       if(dx.ge.0.) then
+          e=a-x
+        else
+          e=b-x
+        endif
+        d=0.5*e
+2       if(abs(d).ge.tol1) then
+          u=x+d
+          fu=ff(u)
+        else
+          u=x+sign(tol1,d)
+          fu=ff(u)
+          if(fu.gt.fx)go to 3
+        endif
+        du=dff(u)
+        if(fu.le.fx) then
+          if(u.ge.x) then
+            a=x
+          else
+            b=x
+          endif
+          v=w
+          fv=fw
+          dv=dw
+          w=x
+          fw=fx
+          dw=dx
+          x=u
+          fx=fu
+          dx=du
+        else
+          if(u.lt.x) then
+            a=u
+          else
+            b=u
+          endif
+          if(fu.le.fw .or. w.eq.x) then
+            v=w
+            fv=fw
+            dv=dw
+            w=u
+            fw=fu
+            dw=du
+          else if(fu.le.fv .or. v.eq.x .or. v.eq.w) then
+            v=u
+            fv=fu
+            dv=du
+          endif
+        endif
+11    continue
+      pause 'dbrent exceeded maximum iterations.'
+3     xmin=x
+      dbrent=fx
+      return
+      end

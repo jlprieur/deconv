@@ -1,0 +1,13 @@
+dc_cgradient.c
+dc_cgradient_mallat.c
+dc_direct_snr.c
+dc_erreur.c
+dc_ftm.c
+dc_ftmm_1D.c
+dc_ftmm.c
+dc_gaussian_noise.c
+dc_lissage_1D.c
+dc_lissage.c
+dc_regul.c
+dc_sigmai.c
+dc_snr.c

@@ -1,0 +1,63 @@
+##############################################################################
+# Makefile for SOURCE
+# to generate executable version of JLP fortran programs
+# Uses jlp_make.mk
+#
+# JLP
+# Version 24/04/2002
+##############################################################################
+include ./jlp_make_toto.mk
+MIDLIB= $(JLPSRC)/aris_lib.o $(JLPSRC)/fitsio/libcfitsio.a 
+MIDLIB=jlp0_rdfitsio.o jlp0_wrfitsio.o ../fitsio/libcfitsio.a \
+       jlp_syst.o auto_scale1.o
+NUMREC_LIB=dcv_cgrad.o 
+MATHLIB= $(JLPSRC)/fft/fftw_set.o $(JLPSRC)/fft/recent_fft.o $(JLPSRC)/fft/libfftw.a
+JLIB=$(mylib)/jlputil.a $(mylib)/newplot0.a $(mylib)/jlp_splot.a
+JLIB=../splot/jlp_splot.a
+
+.SUFFIXES:  .c .o .exe 
+
+.c.o:
+	cc -c $(CFLAGS) $*.c
+
+.o.exe:
+	cc -o $(EXEC)/$*.exe $*.o $(NUMREC_LIB) \
+	$(JLIB) $(MIDLIB) $(MATHLIB) $(F77LIB) $(XLIB) -lm
+ 
+.c.exe:
+	cc -c $(CFLAGS) $*.c
+	cc -o $(EXEC)/$*.exe $*.o $(NUMREC_LIB) \
+	$(JLIB) $(MIDLIB) $(MATHLIB) $(F77LIB) $(XLIB) -lm
+
+all: $(NUMREC_LIB) $(MIDLIB)
+
+dcv_test0.exe : dcv_test0.c jlp_dcv.h $(NUMREC_LIB_SRC)
+
+dcv_test1.exe : dcv_test1.c jlp_dcv.h $(NUMREC_LIB_SRC)
+
+dcv_deconv_1D.exe : dcv_deconv_1D.c dcv_1D_sub.c dcv_1D_sub.o dcv_cgrad.c jlp_dcv.h 
+	cc -c $(CFLAGS) $*.c
+	cc -o $(EXEC)/$*.exe $*.o dcv_1D_sub.o $(NUMREC_LIB) \
+	$(JLIB) $(MIDLIB) $(MATHLIB) $(F77LIB) $(XLIB) -lm
+
+dcv_deconv_2D.exe : dcv_deconv_2D.c dcv_2D_sub.c dcv_2D_sub.o dcv_cgrad.c jlp_dcv.h 
+	cc -c $(CFLAGS) $*.c
+	cc -o $(EXEC)/$*.exe $*.o dcv_2D_sub.o $(NUMREC_LIB) \
+	$(JLIB) $(MIDLIB) $(MATHLIB) $(F77LIB) $(XLIB) -lm
+
+dcv_cgrad.o : dcv_cgrad.c jlp_dcv.h
+
+jlp0_rdfitsio.o : jlp0_rdfitsio.c jlp_dcv.h
+
+jlp0_wrfitsio.o : jlp0_wrfitsio.c jlp_dcv.h
+
+jlp_syst.o : jlp_syst.c jlp_dcv.h
+
+dcv_1D_sub.o : dcv_1D_sub.c jlp_dcv.h
+
+dcv_2D_sub.o : dcv_2D_sub.c jlp_dcv.h
+
+auto_scale1.o : auto_scale1.c
+
+clean:
+	rm -f *.o

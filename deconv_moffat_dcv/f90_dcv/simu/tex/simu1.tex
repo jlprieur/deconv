@@ -1,0 +1,74 @@
+%\section{Simulation No2}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\centerline{\epsfxsize=9cm\epsfbox{orig.ps}
+\hskip-1cm\epsfxsize=9cm\epsfbox{pw_orig.ps}}
+\centerline{\epsfxsize=9cm\epsfbox{psf.ps}
+\hskip-1cm\epsfxsize=9cm\epsfbox{pw_psf.ps}}
+\centerline{\epsfxsize=9cm\epsfbox{filt_orig.ps}
+\hskip-1cm\epsfxsize=9cm\epsfbox{pw_filt_orig.ps}}
+\centerline{\epsfxsize=9cm\epsfbox{noisy_sig.ps}
+\hskip-1cm\epsfxsize=9cm\epsfbox{pw_noisy.ps}}
+\caption{Simulation \#1. De haut en bas (à gauche): signal original,
+réponse impulsionnelle du filtre, signal filtré et signal filtré et bruité.
+A droite: spectre de puissance correspondant.}
+\label{fig:s1-signal}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\centerline{\epsfxsize=10cm\epsfbox{s1_inverse.ps}
+\hskip-1cm\epsfxsize=10cm\epsfbox{s1_inverse_filt.ps}}
+\centerline{\epsfxsize=10cm\epsfbox{s1_wiener.ps}
+\hskip-1cm\epsfxsize=10cm\epsfbox{s1_wiener_filt.ps}}
+\caption{Simulation \#1. 
+En haut: simple division spectrale et filtre inverse correspondant.
+En bas: deconvolution par filtre de Wiener et filtre correspondant.}
+\label{fig:s1-wiener}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\centerline{\epsfxsize=10cm\epsfbox{s1_tikho_0.ps}
+\hskip-1cm\epsfxsize=10cm\epsfbox{s1_tikho_05.ps}}
+\centerline{\epsfxsize=10cm\epsfbox{s1_tikho_1.ps}
+\hskip-1cm\epsfxsize=10cm\epsfbox{s1_tikho_2.ps}}
+\caption{Simulation \#1. Déconvolution avec régularisation de Tikhonov. 
+De gauche à droite et de haut en bas: $\alpha$=0 (sans régularisation), 
+$\alpha$=0.5, $\alpha$=1. et $\alpha$=2 (tolérance = $10^{-6}$).}
+\label{fig:s1-tikho}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\centerline{\epsfxsize=10cm\epsfbox{s1_mem_05.ps}
+\hskip-1cm\epsfxsize=10cm\epsfbox{s1_mem_1.ps}}
+\centerline{\epsfxsize=10cm\epsfbox{s1_mem_2.ps}
+\hskip-1cm\epsfxsize=10cm\epsfbox{s1_mem_5.ps}}
+\caption{Simulation \#1. Déconvolution avec la méthode du Maximum d'Entropie. 
+De gauche à droite et de haut en bas: $\alpha$=0.5, 
+$\alpha$=1., $\alpha$=2. et $\alpha$=5 (tolérance = $10^{-6}$).}
+\label{fig:s1-mem}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\centerline{\epsfxsize=10cm\epsfbox{s1_gmark_5.ps}
+\hskip-1cm\epsfxsize=10cm\epsfbox{s1_gmark_10.ps}}
+\caption{Simulation \#1. Déconvolution avec régularisation de Gauss-Markov: 
+A gauche: $\alpha$=5, à droite: $\alpha$=10 (tolérance = $10^{-6}$).}
+\label{fig:s1-gmark}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[h]
+\centerline{\epsfxsize=10cm\epsfbox{s1_sqrt_10_001.ps}
+\hskip-1cm\epsfxsize=10cm\epsfbox{s1_sqrt_10_05.ps}}
+\caption{Simulation \#1. 
+Déconvolution avec régularisation convexe en $\sqrt{s^2+x^2}$
+avec $s$=0.001 (à gauche) et $s$=0.05 (à droite). Dans les deux cas: 
+$\alpha$=10. et tolérance = $10^{-6}$.}
+\label{fig:s1-sqrt}
+\end{figure}
+

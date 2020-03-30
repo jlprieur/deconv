@@ -1,0 +1,80 @@
+%\documentclass{article}
+\documentclass[12pt]{book}
+
+%%% BOF  FONTS
+% In /usr/share/texmf/tex/latex/seminar, fonts are helvetica from semhelv.sty :
+% But there are other possibilities (in /usr/share/texmf/tex/latex/psnfss):
+% (should check that \rmdefault is redefined in those *.sty files...)
+%
+% For Times fonts
+\usepackage{times}
+% Bookman: nice for titles, but still similar to Times and not easy to read
+%\usepackage{bookman}
+% Chancery: original, look a bit like gothic, but too light.
+%\usepackage{chancery}
+% Charter: similar to Times, but more square; a possible alternative to it.
+%\usepackage{charter}
+% NewCent: better than Times (like Times, but heavier, hence easier to read).
+%\usepackage{newcent}
+% Palatino: similar to Times, but not easy to read
+%\usepackage{palatino}
+% Utopia: similar to Times, but not easy to read
+%\usepackage{utopia}
+%%% EOF  FONTS
+
+
+\voffset=-15mm
+\hoffset=-5mm
+\evensidemargin=10mm
+\textwidth=156mm
+\textheight=250mm
+
+\usepackage{epsf}
+% To include eepic files:
+\usepackage{epic,eepic}
+
+% To display math symbols, R, N, Z, etc
+\usepackage{xspace}
+\usepackage{bbold}
+
+%%% Pour les accents:
+\usepackage[latin1]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+
+% For eps graphics
+\usepackage{psfig}
+% I add the directory ./figs for figures:
+\psfigurepath{figs}
+
+% Pour les figures compl\`etes:
+\psfull
+% Pour le cadre seulement des figures:
+%\psdraft
+
+%\includeonly{simu5}
+
+\begin{document}
+
+\include{dcv_simu}
+%% Simulations #1: cas monodimensionnel (profil un peu complexe) 
+\include{simu1}
+%% Simulations #2: cas monodimensionnel (spectre de raies) 
+\include{simu2}
+%% Simulations #3: avec fond non uniforme: échec!
+%\include{simu3}
+%% Simulations #4: avec fond non uniforme: échec!
+%\include{simu4}
+%% Simulations #5: avec fond uniforme et null: OK! 
+\include{simu5}
+\include{chap2c_latex}
+\include{dcv-bibli}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{document}
+
+%%%% Local Variables:
+%%%% mode: latex
+%%%% TeX-master: t
+%%%% TeX-display-help: yes
+%%%% End:
